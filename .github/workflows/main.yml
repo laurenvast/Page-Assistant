@@ -1,0 +1,21 @@
+name: Set key
+
+on: 
+  push:
+    branches:
+      - main  # Runs the workflow on every push to the main branch
+
+jobs:
+  example-job:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run script with secret
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      run: |
+        echo "Running with my API key..."
+        echo "API key is: $ANTHROPIC_API_KEY"
