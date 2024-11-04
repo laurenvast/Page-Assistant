@@ -1,85 +1,70 @@
-// background.js
-
-// Global configuration object
-const CONFIG = {
-  API: {
-    ENDPOINT: 'https://api-backend-e2jacgf53-laurens-projects-a633e35d.vercel.app/api/chat',
-  },
-  SELECTORS: {
-    TARGET_CONTAINER: 'body',
-    UI: {
-      MESSAGES: '#messages',
-      INPUT: '#question-input',
-      ASK_BUTTON: '#ask-button'
-    }
-  },
-  UI_TEXT: {
-    WELCOME_MESSAGE: {
-      GREETING: `👋 Welcome to Page Assistant!`,
-      SUBTITLE: 'Here\'s what I found on this page:',
-    },
-    BUTTON: {
-      ASK: 'Ask',
-      LOADING: 'Loading...'
-    },
-    INPUT: {
-      PLACEHOLDER: 'Ask a question about this page...'
-    },
-    ERRORS: {
-      NO_TAB: 'No active tab found',
-      NO_CONTAINER: (selector) => `Container not found: ${selector}`,
-      INIT_FAILED: 'Failed to initialize the assistant. Please try reloading.',
-      API_ERROR: (error) => `API error: ${error}`,
-      GENERIC: 'An unexpected error occurred. Please check the console for details.'
-    }
-  },
-  PROMPTS: {
-    SYSTEM: (content) =>
-      `You are a helpful web page assistant analyzing the following content: """${content}"""\n\n` +
-      'Your role is to help users understand this content by answering their questions and suggesting relevant follow-up questions. ' +
-      'Your responses should be clear, concise, and directly related to the content provided. ' +
-      'After each response, you must suggest 3 follow-up questions that explore different aspects of the content. ' +
-      'These questions should be formatted as a JSON array at the end of your response.\n\n' +
-      'Response format:\n' +
-      '1. First, provide your answer or analysis\n' +
-      '2. End with exactly 3 follow-up questions in a JSON array, e.g., ["Question 1?", "Question 2?", "Question 3?"]\n\n' +
-      'Keep your responses focused on the provided content.',
-
-    INITIAL_QUESTION: 'Please provide a concise summary of the main points in this content.',
-
-    FORMAT_USER_QUESTION: (question) => `Question about the content: ${question}`
-  }
+const API_CONFIG = {
+  ENDPOINT: 'https://api-backend-gamma-two.vercel.app/api/chat',
+  MAX_TOKENS: 1024,
 };
 
-// Handle panel behavior
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.open({ windowId: tab.windowId });
-});
 
 // Handle messages from sidepanel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GET_CONFIG') {
-    sendResponse(CONFIG);
-    return true;
+  if (request.type === 'GET_PAGE_CONTENT') {
+    handleGetPageContent(request.tabId).then(sendResponse);
+    return true; // Keep the message channel open for async response
   }
 
   if (request.type === 'MAKE_API_REQUEST') {
-    fetch(CONFIG.API.ENDPOINT, {
+    handleApiRequest(request.data).then(sendResponse);
+    return true;
+  }
+});
+
+
+async function handleGetPageContent(tabId) {
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (targetSelector) => {
+        const container = document.querySelector(targetSelector);
+        return container ? container.innerText : null;
+      },
+      args: ['body'] // Default to body, can be made configurable
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Handle getting page content
+async function handleApiRequest({ content, messages }) {
+  try {
+    const response = await fetch(API_CONFIG.ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        messages: request.messages,
-        max_tokens: CONFIG.API.MAX_TOKENS
+        content: content,  // Send the page content
+        messages: messages
       })
-    })
-      .then(response => response.json())
-      .then(data => sendResponse({ success: true, data }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
+    });
 
-    return true; // Required for async response
+    if (!response.ok) {
+      throw new Error(response.error?.message || JSON.stringify(response.error) || 'Unknown error');
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
+}
+
+
+// Set up side panel behavior
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
+chrome.action.onClicked.addListener((tab) => {
+  chrome.sidePanel.open({ windowId: tab.windowId });
 });
