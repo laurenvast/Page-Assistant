@@ -29,10 +29,10 @@ jobs:
       run: npm run build
 
     - name: Create ZIP artifact
-      run: zip -r extension.zip dist/
+      run: zip -r extension.zip Page-Assistant/
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: 💬 Page Assistant (chrome extension)
+        name: Page Assistant (chrome extension)
         path: extension.zip
