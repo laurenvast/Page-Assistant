@@ -1,15 +1,4 @@
-// sidepanel.js
-const ANTHROPIC_API_KEY = '???';
-
-// Global configuration object
 const CONFIG = {
-    API: {
-        KEY: ANTHROPIC_API_KEY,
-        ENDPOINT: 'https://api.anthropic.com/v1/messages',
-        VERSION: '2023-06-01',
-        MODEL: 'claude-3-5-sonnet-20241022',
-        MAX_TOKENS: 1024
-    },
     SELECTORS: {
         TARGET_CONTAINER: 'body',
         UI: {
@@ -20,7 +9,7 @@ const CONFIG = {
     },
     UI_TEXT: {
         WELCOME_MESSAGE: {
-            GREETING: `👋 Welcome to Page Assistant!`,
+            GREETING: '👋 Welcome to Page Assistant!',
             SUBTITLE: 'Here\'s what I found on this page:',
         },
         BUTTON: {
@@ -78,7 +67,6 @@ class PageAssistant {
         this.handleKeyPress = this.handleKeyPress.bind(this);
     }
 
-    // UI Methods
     addMessage(text, className) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${className}`;
@@ -114,7 +102,6 @@ class PageAssistant {
             this.config.UI_TEXT.BUTTON.ASK;
     }
 
-    // Content Methods
     async getPageContent() {
         if (this.pageContent) return this.pageContent;
 
@@ -122,61 +109,43 @@ class PageAssistant {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab) throw new Error(this.config.UI_TEXT.ERRORS.NO_TAB);
 
-            const [{ result }] = await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                func: (targetSelector) => {
-                    const container = document.querySelector(targetSelector);
-                    return container ? container.innerText : null;
-                },
-                args: [this.config.SELECTORS.TARGET_CONTAINER]
+            const response = await chrome.runtime.sendMessage({
+                type: 'GET_PAGE_CONTENT',
+                tabId: tab.id
             });
 
-            if (!result) throw new Error(
-                this.config.UI_TEXT.ERRORS.NO_CONTAINER(this.config.SELECTORS.TARGET_CONTAINER)
-            );
+            if (!response.success) {
+                throw new Error(response.error);
+            }
 
-            this.pageContent = result;
-            console.log('Content retrieved:', result.substring(0, 100) + '...');
-            return result;
+            if (!response.data) {
+                throw new Error(this.config.UI_TEXT.ERRORS.NO_CONTAINER(this.config.SELECTORS.TARGET_CONTAINER));
+            }
+
+            this.pageContent = response.data;
+            console.log('Content retrieved:', response.data.substring(0, 100) + '...');
+            return response.data;
         } catch (error) {
             console.error('Error getting page content:', error);
             throw error;
         }
     }
 
-    // API Methods
     async makeApiRequest(userPrompt) {
         try {
-            const response = await fetch(this.config.API.ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': this.config.API.KEY,
-                    'anthropic-version': this.config.API.VERSION,
-                    'anthropic-dangerous-direct-browser-access': 'true',
-                },
-                body: JSON.stringify({
-                    model: this.config.API.MODEL,
-                    max_tokens: this.config.API.MAX_TOKENS,
-                    system: this.systemPrompt,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: userPrompt
-                        }
-                    ]
-                })
+            const response = await chrome.runtime.sendMessage({
+                type: 'MAKE_API_REQUEST',
+                data: {
+                    systemPrompt: this.systemPrompt,
+                    userPrompt: userPrompt
+                }
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(this.config.UI_TEXT.ERRORS.API_ERROR(
-                    data.error?.message || JSON.stringify(data.error) || 'Unknown error'
-                ));
+            if (!response.success) {
+                throw new Error(response.error);
             }
 
-            return data;
+            return response.data;
         } catch (error) {
             console.error('API request failed:', error);
             throw error;
@@ -201,20 +170,17 @@ class PageAssistant {
         return { mainResponse, followUpQuestions };
     }
 
-    // Main Methods
     async processQuestion(question = '', isInitialLoad = false) {
         try {
             if (!isInitialLoad) {
                 this.addMessage(question, 'user-message');
             }
 
-            // Get page content and set system prompt if not already set
             if (!this.pageContent) {
                 this.pageContent = await this.getPageContent();
                 this.systemPrompt = this.config.PROMPTS.SYSTEM(this.pageContent);
             }
 
-            // Use initial question for welcome message, otherwise format user question
             const userPrompt = isInitialLoad ?
                 this.config.PROMPTS.INITIAL_QUESTION :
                 this.config.PROMPTS.FORMAT_USER_QUESTION(question);
@@ -243,7 +209,6 @@ class PageAssistant {
         }
     }
 
-    // Event Handlers
     async handleQuestion() {
         const question = this.elements.input.value.trim();
         if (question) {
@@ -260,14 +225,12 @@ class PageAssistant {
         }
     }
 
-    // Initialization
     async initialize() {
         try {
             this.setLoading(true);
             await this.processQuestion('', true);
             this.setLoading(false);
 
-            // Event listeners
             this.elements.askButton.addEventListener('click', this.handleQuestion);
             this.elements.input.addEventListener('keypress', this.handleKeyPress);
         } catch (error) {
@@ -278,7 +241,6 @@ class PageAssistant {
     }
 }
 
-// Initialize the assistant
 document.addEventListener('DOMContentLoaded', () => {
     const assistant = new PageAssistant(CONFIG);
     assistant.initialize();

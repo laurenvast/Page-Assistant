@@ -1,0 +1,38 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Create config file
+      run: |
+        echo "export const API_KEY = '${{ secrets.ANTHROPIC_API_KEY }}';" > src/config.js
+
+    - name: Build extension
+      run: npm run build
+
+    - name: Create ZIP artifact
+      run: zip -r extension.zip dist/
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: chrome-extension
+        path: extension.zip
