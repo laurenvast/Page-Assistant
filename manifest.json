@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "💬 Page Assistant",
+  "version": "1.0",
+  "description": "Turn any webpage into a quick-read experience. With Page Assistant, get summaries, ask questions, and discover new insights without reading it all.",
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "styles.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Open Page Assistant"
+  }
+}
