@@ -1,70 +1,31 @@
-const CONFIG = {
-    SELECTORS: {
-        TARGET_CONTAINER: 'body',
-        UI: {
-            MESSAGES: '#messages',
-            INPUT: '#question-input',
-            ASK_BUTTON: '#ask-button'
-        }
-    },
-    UI_TEXT: {
-        WELCOME_MESSAGE: {
-            GREETING: '👋 Welcome to Page Assistant!',
-            SUBTITLE: 'Here\'s what I found on this page:',
-        },
-        BUTTON: {
-            ASK: 'Ask',
-            LOADING: 'Loading...'
-        },
-        INPUT: {
-            PLACEHOLDER: 'Ask a question about this page...'
-        },
-        ERRORS: {
-            NO_TAB: 'No active tab found',
-            NO_CONTAINER: (selector) => `Container not found: ${selector}`,
-            INIT_FAILED: 'Failed to initialize the assistant. Please check your API key and try reloading.',
-            API_ERROR: (error) => `API error: ${error}`,
-            GENERIC: 'An unexpected error occurred. Please check the console for details.'
-        }
-    },
-    PROMPTS: {
-        SYSTEM: (content) =>
-            `You are a helpful web page assistant analyzing the following content: """${content}"""\n\n` +
-            'Your role is to help users understand this content by answering their questions and suggesting relevant follow-up questions. ' +
-            'Your responses should be clear, concise, and directly related to the content provided. ' +
-            'After each response, you must suggest 3 follow-up questions that explore different aspects of the content. ' +
-            'These questions should be formatted as a JSON array at the end of your response.\n\n' +
-            'Response format:\n' +
-            '1. First, provide your answer or analysis\n' +
-            '2. End with exactly 3 follow-up questions in a JSON array, e.g., ["Question 1?", "Question 2?", "Question 3?"]\n\n' +
-            'Keep your responses focused on the provided content.',
-
-        INITIAL_QUESTION: 'Please provide a concise summary of the main points in this content.',
-
-        FORMAT_USER_QUESTION: (question) => `Question about the content: ${question}`
-    }
-};
+// sidepanel.js
 
 class PageAssistant {
-    constructor(config) {
-        this.config = config;
+    constructor() {
+        this.config = null;
         this.pageContent = null;
         this.systemPrompt = null;
+        this.initialized = false;
 
-        // Cache DOM elements
-        this.elements = {
-            messages: document.querySelector(config.SELECTORS.UI.MESSAGES),
-            input: document.querySelector(config.SELECTORS.UI.INPUT),
-            askButton: document.querySelector(config.SELECTORS.UI.ASK_BUTTON)
-        };
-
-        // Set initial UI text
-        this.elements.input.placeholder = config.UI_TEXT.INPUT.PLACEHOLDER;
-        this.elements.askButton.textContent = config.UI_TEXT.BUTTON.ASK;
+        // Cache DOM elements (will be set after config is loaded)
+        this.elements = {};
 
         // Bind methods
         this.handleQuestion = this.handleQuestion.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
+    }
+
+    // UI Methods
+    initializeElements() {
+        this.elements = {
+            messages: document.querySelector(this.config.SELECTORS.UI.MESSAGES),
+            input: document.querySelector(this.config.SELECTORS.UI.INPUT),
+            askButton: document.querySelector(this.config.SELECTORS.UI.ASK_BUTTON)
+        };
+
+        // Set initial UI text
+        this.elements.input.placeholder = this.config.UI_TEXT.INPUT.PLACEHOLDER;
+        this.elements.askButton.textContent = this.config.UI_TEXT.BUTTON.ASK;
     }
 
     addMessage(text, className) {
@@ -102,6 +63,7 @@ class PageAssistant {
             this.config.UI_TEXT.BUTTON.ASK;
     }
 
+    // Content Methods
     async getPageContent() {
         if (this.pageContent) return this.pageContent;
 
@@ -109,36 +71,44 @@ class PageAssistant {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab) throw new Error(this.config.UI_TEXT.ERRORS.NO_TAB);
 
-            const response = await chrome.runtime.sendMessage({
-                type: 'GET_PAGE_CONTENT',
-                tabId: tab.id
+            const [{ result }] = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: (targetSelector) => {
+                    const container = document.querySelector(targetSelector);
+                    return container ? container.innerText : null;
+                },
+                args: [this.config.SELECTORS.TARGET_CONTAINER]
             });
 
-            if (!response.success) {
-                throw new Error(response.error);
-            }
+            if (!result) throw new Error(
+                this.config.UI_TEXT.ERRORS.NO_CONTAINER(this.config.SELECTORS.TARGET_CONTAINER)
+            );
 
-            if (!response.data) {
-                throw new Error(this.config.UI_TEXT.ERRORS.NO_CONTAINER(this.config.SELECTORS.TARGET_CONTAINER));
-            }
-
-            this.pageContent = response.data;
-            console.log('Content retrieved:', response.data.substring(0, 100) + '...');
-            return response.data;
+            this.pageContent = result;
+            return result;
         } catch (error) {
             console.error('Error getting page content:', error);
             throw error;
         }
     }
 
+    // API Methods
     async makeApiRequest(userPrompt) {
         try {
+            const messages = [
+                {
+                    role: 'system',
+                    content: this.systemPrompt
+                },
+                {
+                    role: 'user',
+                    content: userPrompt
+                }
+            ];
+
             const response = await chrome.runtime.sendMessage({
                 type: 'MAKE_API_REQUEST',
-                data: {
-                    systemPrompt: this.systemPrompt,
-                    userPrompt: userPrompt
-                }
+                messages
             });
 
             if (!response.success) {
@@ -153,7 +123,7 @@ class PageAssistant {
     }
 
     parseResponse(response) {
-        const fullResponse = response.content[0].text;
+        const fullResponse = response.content || response.message?.content || '';
         let mainResponse = fullResponse;
         let followUpQuestions = [];
 
@@ -170,12 +140,14 @@ class PageAssistant {
         return { mainResponse, followUpQuestions };
     }
 
+    // Main Methods
     async processQuestion(question = '', isInitialLoad = false) {
         try {
             if (!isInitialLoad) {
                 this.addMessage(question, 'user-message');
             }
 
+            // Get page content and set system prompt if not already set
             if (!this.pageContent) {
                 this.pageContent = await this.getPageContent();
                 this.systemPrompt = this.config.PROMPTS.SYSTEM(this.pageContent);
@@ -209,6 +181,7 @@ class PageAssistant {
         }
     }
 
+    // Event Handlers
     async handleQuestion() {
         const question = this.elements.input.value.trim();
         if (question) {
@@ -225,14 +198,27 @@ class PageAssistant {
         }
     }
 
+    // Initialization
     async initialize() {
         try {
+            // Get config from background script
+            this.config = await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ type: 'GET_CONFIG' }, resolve);
+            });
+
+            // Initialize UI elements
+            this.initializeElements();
+
+            // Start loading sequence
             this.setLoading(true);
             await this.processQuestion('', true);
             this.setLoading(false);
 
+            // Add event listeners
             this.elements.askButton.addEventListener('click', this.handleQuestion);
             this.elements.input.addEventListener('keypress', this.handleKeyPress);
+
+            this.initialized = true;
         } catch (error) {
             console.error('Initialization failed:', error);
             this.addMessage(this.config.UI_TEXT.ERRORS.INIT_FAILED, 'error');
@@ -241,7 +227,8 @@ class PageAssistant {
     }
 }
 
+// Initialize the assistant
 document.addEventListener('DOMContentLoaded', () => {
-    const assistant = new PageAssistant(CONFIG);
+    const assistant = new PageAssistant();
     assistant.initialize();
 });
