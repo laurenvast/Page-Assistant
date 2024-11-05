@@ -1,8 +1,5 @@
-// import { getMockResponse } from './mock-api.js';]
-import { CONFIG } from "./constants.js"
-const IS_DEVELOPMENT = true; // Toggle this for development/production
-
-const TEST_RESPONSES = {
+// mock-api.js
+export const TEST_RESPONSES = {
   "initialSummary": {
     "id": "msg_123abc",
     "type": "message",
@@ -41,15 +38,14 @@ const TEST_RESPONSES = {
   }
 };
 
-// Mock API function that simulates delay
-function getMockResponse(messages) {
+export function getMockResponse(messages) {
   return new Promise((resolve) => {
     setTimeout(() => {
       try {
         const question = messages[0]?.content;
 
         // Return different responses based on the question
-        if (!question || question === CONFIG.PROMPTS.INITIAL_QUESTION) {
+        if (!question || question.includes('initial summary')) {
           return resolve(TEST_RESPONSES.initialSummary);
         } else if (question.toLowerCase().includes('error')) {
           return resolve(TEST_RESPONSES.error);
@@ -57,90 +53,8 @@ function getMockResponse(messages) {
           return resolve(TEST_RESPONSES.default);
         }
       } catch (error) {
-        console.log(error);
         resolve(TEST_RESPONSES.error);
       }
     }, 1000); // Simulate network delay
   });
 }
-
-
-
-
-const API_CONFIG = {
-  ENDPOINT: 'https://api-backend-gamma-two.vercel.app/api/chat'
-};
-
-// Handle messages from sidepanel
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GET_PAGE_CONTENT') {
-    handleGetPageContent(request.tabId).then(sendResponse);
-    return true; // Keep the message channel open for async response
-  }
-
-  if (request.type === 'MAKE_API_REQUEST') {
-    handleApiRequest(request.data).then(sendResponse);
-    return true;
-  }
-});
-
-
-async function handleGetPageContent(tabId) {
-  try {
-    const [{ result }] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: (targetSelector) => {
-        const container = document.querySelector(targetSelector);
-        return container ? container.innerText : null;
-      },
-      args: ['body'] // Default to body, can be made configurable
-    });
-
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-// Handle getting page content
-async function handleApiRequest({ content, messages }) {
-
-  if (IS_DEVELOPMENT) {
-    try {
-      const response = await getMockResponse(messages);
-
-      return { success: true, data: response };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-  try {
-    const response = await fetch(API_CONFIG.ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        content: content,  // Send the page content
-        messages: messages
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(response.error?.message || JSON.stringify(response.error) || 'Unknown error');
-    }
-
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-
-// Set up side panel behavior
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-
-chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.open({ windowId: tab.windowId });
-});
