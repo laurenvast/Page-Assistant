@@ -1,4 +1,3 @@
-// mock-api.js
 export const TEST_RESPONSES = {
   "initialSummary": {
     "id": "msg_123abc",
@@ -38,6 +37,9 @@ export const TEST_RESPONSES = {
   }
 };
 
+import { CONFIG } from "./constants.js"
+
+// Mock API function that simulates delay
 export function getMockResponse(messages) {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -45,7 +47,7 @@ export function getMockResponse(messages) {
         const question = messages[0]?.content;
 
         // Return different responses based on the question
-        if (!question || question.includes('initial summary')) {
+        if (!question || question === CONFIG.PROMPTS.INITIAL_QUESTION) {
           return resolve(TEST_RESPONSES.initialSummary);
         } else if (question.toLowerCase().includes('error')) {
           return resolve(TEST_RESPONSES.error);
@@ -53,8 +55,10 @@ export function getMockResponse(messages) {
           return resolve(TEST_RESPONSES.default);
         }
       } catch (error) {
+        console.log(error);
         resolve(TEST_RESPONSES.error);
       }
     }, 1000); // Simulate network delay
   });
 }
+

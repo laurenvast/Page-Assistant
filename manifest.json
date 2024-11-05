@@ -16,7 +16,8 @@
     {
       "resources": [
         "styles.css",
-        "constants.js"
+        "constants.js",
+        "mock-api.js"
       ],
       "matches": [
         "<all_urls>"
