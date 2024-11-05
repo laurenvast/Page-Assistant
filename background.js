@@ -1,12 +1,9 @@
-import { API_KEY } from './config';
-
 const API_CONFIG = {
-  ENDPOINT: 'https://api.anthropic.com/v1/messages',
-  VERSION: '2023-06-01',
-  MODEL: 'claude-3-5-sonnet-20241022',
+  ENDPOINT: 'https://api-backend-gamma-two.vercel.app/api/chat',
   MAX_TOKENS: 1024,
-  KEY: API_KEY
 };
+
+
 
 // Handle messages from sidepanel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -21,7 +18,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Handle getting page content
+
 async function handleGetPageContent(tabId) {
   try {
     const [{ result }] = await chrome.scripting.executeScript({
@@ -39,41 +36,31 @@ async function handleGetPageContent(tabId) {
   }
 }
 
-// Handle API requests
-async function handleApiRequest({ systemPrompt, userPrompt }) {
+// Handle getting page content
+async function handleApiRequest({ content, messages }) {
   try {
     const response = await fetch(API_CONFIG.ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': API_CONFIG.KEY,
-        'anthropic-version': API_CONFIG.VERSION,
-        'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: API_CONFIG.MODEL,
-        max_tokens: API_CONFIG.MAX_TOKENS,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ]
+        content: content,  // Send the page content
+        messages: messages
       })
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-      throw new Error(data.error?.message || JSON.stringify(data.error) || 'Unknown error');
+      throw new Error(response.error?.message || JSON.stringify(response.error) || 'Unknown error');
     }
 
+    const data = await response.json();
     return { success: true, data };
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
+
 
 // Set up side panel behavior
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });

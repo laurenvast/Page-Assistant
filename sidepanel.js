@@ -30,14 +30,14 @@ const CONFIG = {
     PROMPTS: {
         SYSTEM: (content) =>
             `You are a helpful web page assistant analyzing the following content: """${content}"""\n\n` +
-            'Your role is to help users understand this content by answering their questions and suggesting relevant follow-up questions. ' +
-            'Your responses should be clear, concise, and directly related to the content provided. ' +
-            'After each response, you must suggest 3 follow-up questions that explore different aspects of the content. ' +
-            'These questions should be formatted as a JSON array at the end of your response.\n\n' +
-            'Response format:\n' +
-            '1. First, provide your answer or analysis\n' +
-            '2. End with exactly 3 follow-up questions in a JSON array, e.g., ["Question 1?", "Question 2?", "Question 3?"]\n\n' +
-            'Keep your responses focused on the provided content.',
+            `Your role is to help users understand this content by answering their questions and suggesting relevant follow-up questions. ` +
+            `Your responses should be clear, concise, and directly related to the content provided. ` +
+            `After each response, you must suggest 3 follow-up questions that explore different aspects of the content. ` +
+            `These questions should be formatted as a JSON array at the end of your response.\n\n` +
+            `Response format:\n'` +
+            `1. First, provide your answer or analysis\n` +
+            `2. End with exactly 3 follow-up questions in a JSON array, e.g., ["Question 1?", "Question 2?", "Question 3?"]\n\n` +
+            `Keep your responses focused on the provided content.`,
 
         INITIAL_QUESTION: 'Please provide a concise summary of the main points in this content.',
 
@@ -136,8 +136,13 @@ class PageAssistant {
             const response = await chrome.runtime.sendMessage({
                 type: 'MAKE_API_REQUEST',
                 data: {
-                    systemPrompt: this.systemPrompt,
-                    userPrompt: userPrompt
+                    content: this.pageContent,  // Send the page content instead of system prompt
+                    messages: [
+                        {
+                            role: 'user',
+                            content: userPrompt
+                        }
+                    ]
                 }
             });
 
