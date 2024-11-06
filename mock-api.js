@@ -58,7 +58,7 @@ export function getMockResponse(messages) {
         console.log(error);
         resolve(TEST_RESPONSES.error);
       }
-    }, 1000); // Simulate network delay
+    }, 3000); // Simulate network delay
   });
 }
 
