@@ -58,8 +58,21 @@ class PageAssistant {
                 button.className = 'follow-up-button';
                 button.textContent = question;
                 button.addEventListener('click', () => {
-                    this.elements.input.value = question;
-                    this.elements.askButton.click();
+                    if (!button.disabled) {
+                        // Remove selected class from all buttons and enable them
+                        const allButtons = document.querySelectorAll('.follow-up-button');
+                        allButtons.forEach(btn => {
+                            btn.classList.remove('selected');
+                            btn.disabled = false;
+                        });
+
+                        // Add selected class to clicked button and disable it
+                        button.classList.add('selected');
+                        button.disabled = true;
+
+                        this.elements.input.value = question;
+                        this.elements.askButton.click();
+                    }
                 });
                 questionsContainer.appendChild(button);
             });
@@ -79,8 +92,21 @@ class PageAssistant {
                     button.className = 'follow-up-button';
                     button.textContent = question;
                     button.addEventListener('click', () => {
-                        this.elements.input.value = question;
-                        this.elements.askButton.click();
+                        if (!button.disabled) {
+                            // Remove selected class from all buttons and enable them
+                            const allButtons = document.querySelectorAll('.follow-up-button');
+                            allButtons.forEach(btn => {
+                                btn.classList.remove('selected');
+                                btn.disabled = false;
+                            });
+
+                            // Add selected class to clicked button and disable it
+                            button.classList.add('selected');
+                            button.disabled = true;
+
+                            this.elements.input.value = question;
+                            this.elements.askButton.click();
+                        }
                     });
                     questionsContainer.appendChild(button);
                 });

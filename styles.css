@@ -102,7 +102,6 @@ body {
   border-radius: var(--border-radius-large);
   line-height: 125%;
   color: var(--color-primary-light);
-
 }
 
 .assistant-message {
@@ -135,15 +134,49 @@ body {
   text-align: left;
   border-radius: var(--border-radius-large);
   cursor: pointer;
-  color: rgba(0, 0, 0, 0.55);
-  transition: background-color 0.2s;
+  color: rgba(0, 0, 0, 0.65);
+  transition: all 0.2s;
   font-size: 1em;
   line-height: 125%;
-
+  position: relative;
+  padding-left: 2em;
 }
 
-.follow-up-button:hover {
+.follow-up-button::before {
+  content: '';
+  position: absolute;
+  left: .5em;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1em;
+  height: 1em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(0, 0, 0, 0.55)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'%3E%3C/line%3E%3Cpolyline points='12 5 19 12 12 19'%3E%3C/polyline%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.follow-up-button:not(.selected):hover {
   background-color: var(--color-primary-light);
+  color: rgba(0, 0, 0, 0.8);
+  border-color: var(--color-primary-light);
+}
+
+.follow-up-button:not(.selected):hover::before {
+  transform: translateY(-50%) translateX(3px);
+  opacity: 0.8;
+}
+
+.follow-up-button.selected {
+  background: none;
+  color: var(--color-text);
+  border: none;
+}
+
+.follow-up-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 /* Button styles */
@@ -164,7 +197,6 @@ button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
 }
-
 
 /* Loading animation container */
 .loading-animation {
@@ -187,7 +219,6 @@ button:disabled {
     linear-gradient(to right, rgba(25, 118, 210, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(25, 118, 210, 0.05) 1px, transparent 1px);
   background-size: 10px 10px, 20px 20px, 20px 20px;
-  /* Slightly smaller grid */
   background-position: center;
   opacity: 0.3;
   mask-image: linear-gradient(to right,
@@ -200,9 +231,7 @@ button:disabled {
 .scan-box {
   position: absolute;
   width: 20px;
-  /* Reduced from 24px */
   height: 20px;
-  /* Reduced from 24px */
   border: 2px solid rgba(25, 118, 210, 0.8);
   animation: smartScan 3s infinite cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: center;
@@ -275,31 +304,26 @@ button:disabled {
 @keyframes smartScan {
   0% {
     transform: translate(15px, 8px) rotate(0deg) scale(0.9);
-    /* Adjusted x position */
     opacity: 0.8;
   }
 
   25% {
     transform: translate(85px, 8px) rotate(90deg) scale(1);
-    /* Adjusted x position */
     opacity: 1;
   }
 
   50% {
     transform: translate(85px, 8px) rotate(180deg) scale(0.9);
-    /* Adjusted x position */
     opacity: 0.8;
   }
 
   75% {
     transform: translate(15px, 8px) rotate(270deg) scale(1);
-    /* Adjusted x position */
     opacity: 1;
   }
 
   100% {
     transform: translate(15px, 8px) rotate(360deg) scale(0.9);
-    /* Adjusted x position */
     opacity: 0.8;
   }
 }
@@ -310,13 +334,11 @@ button:disabled {
   100% {
     opacity: 0;
     transform: translateX(-45%);
-    /* Adjusted for narrower width */
   }
 
   50% {
     opacity: 1;
     transform: translateX(45%);
-    /* Adjusted for narrower width */
   }
 }
 
