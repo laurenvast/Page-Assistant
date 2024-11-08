@@ -1,9 +1,9 @@
+import { getMockResponse } from './mock-api.js';
+const IS_DEVELOPMENT = true; // Toggle this for development/production
+
 const API_CONFIG = {
-  ENDPOINT: 'https://api-backend-gamma-two.vercel.app/api/chat',
-  MAX_TOKENS: 1024,
+  ENDPOINT: 'https://api-backend-gamma-two.vercel.app/api/chat'
 };
-
-
 
 // Handle messages from sidepanel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -38,6 +38,16 @@ async function handleGetPageContent(tabId) {
 
 // Handle getting page content
 async function handleApiRequest({ content, messages }) {
+
+  if (IS_DEVELOPMENT) {
+    try {
+      const response = await getMockResponse(messages);
+
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
   try {
     const response = await fetch(API_CONFIG.ENDPOINT, {
       method: 'POST',

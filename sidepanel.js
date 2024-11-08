@@ -1,55 +1,12 @@
-const CONFIG = {
-    SELECTORS: {
-        TARGET_CONTAINER: 'body',
-        UI: {
-            MESSAGES: '#messages',
-            INPUT: '#question-input',
-            ASK_BUTTON: '#ask-button'
-        }
-    },
-    UI_TEXT: {
-        WELCOME_MESSAGE: {
-            GREETING: '👋 Welcome to Page Assistant!',
-            SUBTITLE: 'Here\'s what I found on this page:',
-        },
-        BUTTON: {
-            ASK: 'Ask',
-            LOADING: 'Loading...'
-        },
-        INPUT: {
-            PLACEHOLDER: 'Ask a question about this page...'
-        },
-        ERRORS: {
-            NO_TAB: 'No active tab found',
-            NO_CONTAINER: (selector) => `Container not found: ${selector}`,
-            INIT_FAILED: 'Failed to initialize the assistant. Please check your API key and try reloading.',
-            API_ERROR: (error) => `API error: ${error}`,
-            GENERIC: 'An unexpected error occurred. Please check the console for details.'
-        }
-    },
-    PROMPTS: {
-        SYSTEM: (content) =>
-            `You are a helpful web page assistant analyzing the following content: """${content}"""\n\n` +
-            `Your role is to help users understand this content by answering their questions and suggesting relevant follow-up questions. ` +
-            `Your responses should be clear, concise, and directly related to the content provided. ` +
-            `After each response, you must suggest 3 follow-up questions that explore different aspects of the content. ` +
-            `These questions should be formatted as a JSON array at the end of your response.\n\n` +
-            `Response format:\n'` +
-            `1. First, provide your answer or analysis\n` +
-            `2. End with exactly 3 follow-up questions in a JSON array, e.g., ["Question 1?", "Question 2?", "Question 3?"]\n\n` +
-            `Keep your responses focused on the provided content.`,
-
-        INITIAL_QUESTION: 'Please provide a concise summary of the main points in this content.',
-
-        FORMAT_USER_QUESTION: (question) => `Question about the content: ${question}`
-    }
-};
+import { CONFIG } from "./constants.js"
+import { addFormattedMessage } from "./formatter.js";
 
 class PageAssistant {
     constructor(config) {
         this.config = config;
         this.pageContent = null;
         this.systemPrompt = null;
+        this.isInitialLoad = true;
 
         // Cache DOM elements
         this.elements = {
@@ -65,43 +22,152 @@ class PageAssistant {
         // Bind methods
         this.handleQuestion = this.handleQuestion.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
+
+        this.loadingTimeout = null;
+        this.isLoading = false;  // Add this to track loading state
+
+    }
+
+    smoothScrollToBottom() {
+        if (!this.isInitialLoad) {
+            this.elements.messages.scrollTo({
+                top: this.elements.messages.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
     }
 
     addMessage(text, className) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${className}`;
-        messageDiv.textContent = text;
-        this.elements.messages.appendChild(messageDiv);
-        this.elements.messages.scrollTop = this.elements.messages.scrollHeight;
+        const messageDiv = addFormattedMessage(this.elements.messages, text, className);
+        this.smoothScrollToBottom();
         return messageDiv;
     }
 
+
     addFollowUpQuestions(questions) {
-        const questionsContainer = document.createElement('div');
-        questionsContainer.className = 'follow-up-questions';
+        if (this.isInitialLoad) {
+            // Add follow-ups immediately without animation during initial load
+            const questionsContainer = document.createElement('div');
+            questionsContainer.className = 'follow-up-questions';
 
-        questions.forEach(question => {
-            const button = document.createElement('button');
-            button.className = 'follow-up-button';
-            button.textContent = question;
-            button.addEventListener('click', () => {
-                this.elements.input.value = question;
-                this.elements.askButton.click();
+            questions.forEach(question => {
+                const button = document.createElement('button');
+                button.className = 'follow-up-button';
+                button.textContent = question;
+                button.addEventListener('click', () => {
+                    if (!button.disabled) {
+                        // Add selected class to clicked button and disable only this button
+                        button.classList.add('selected');
+                        button.disabled = true;
+
+                        this.elements.input.value = question;
+                        this.elements.askButton.click();
+                    }
+                });
+                questionsContainer.appendChild(button);
             });
-            questionsContainer.appendChild(button);
-        });
 
-        this.addMessage('', 'follow-up-container').appendChild(questionsContainer);
+            const container = document.createElement('div');
+            container.className = 'message follow-up-container';
+            container.appendChild(questionsContainer);
+            this.elements.messages.appendChild(container);
+        } else {
+            // Animated follow-ups for user interactions
+            setTimeout(() => {
+                const questionsContainer = document.createElement('div');
+                questionsContainer.className = 'follow-up-questions';
+
+                questions.forEach(question => {
+                    const button = document.createElement('button');
+                    button.className = 'follow-up-button';
+                    button.textContent = question;
+                    button.addEventListener('click', () => {
+                        if (!button.disabled) {
+                            // Add selected class to clicked button and disable only this button
+                            button.classList.add('selected');
+                            button.disabled = true;
+
+                            this.elements.input.value = question;
+                            this.elements.askButton.click();
+                        }
+                    });
+                    questionsContainer.appendChild(button);
+                });
+
+                const container = document.createElement('div');
+                container.className = 'message follow-up-container';
+                container.style.opacity = '0';
+                container.style.transition = 'opacity 0.3s ease-in-out';
+                container.appendChild(questionsContainer);
+
+                this.elements.messages.appendChild(container);
+                this.smoothScrollToBottom();
+
+                setTimeout(() => {
+                    container.style.opacity = '1';
+                }, 50);
+            }, 500);
+        }
+    }
+    createLoadingAnimation() {
+        const loadingHTML = `
+            <div class="loading-animation">
+                <div class="scan-grid"></div>
+                <div class="scan-box">
+                    <div class="corner-mark top-left"></div>
+                    <div class="corner-mark top-right"></div>
+                    <div class="corner-mark bottom-left"></div>
+                    <div class="corner-mark bottom-right"></div>
+                </div>
+                <div class="scan-details"></div>
+                <div class="scan-glow"></div>
+            </div>
+        `;
+        const container = document.createElement('div');
+        container.className = 'message loading-container';
+        container.innerHTML = loadingHTML;
+        return container;
     }
 
-    setLoading(isLoading) {
+    setLoading(isLoading, isInitialLoad = false) {
+        if (this.isLoading === isLoading) return; // Prevent duplicate loading states
+        this.isLoading = isLoading;
+
         this.elements.askButton.disabled = isLoading;
         this.elements.input.disabled = isLoading;
-        this.elements.askButton.textContent = isLoading ?
-            this.config.UI_TEXT.BUTTON.LOADING :
-            this.config.UI_TEXT.BUTTON.ASK;
-    }
 
+        // Remove any existing loading animations
+        const existingLoading = document.querySelector('.loading-container');
+        if (existingLoading) {
+            existingLoading.remove();
+        }
+
+        // Add new loading animation if needed
+        if (isLoading) {
+            if (isInitialLoad) {
+                // Show loading immediately for initial load
+                const loadingElement = this.createLoadingAnimation();
+                this.elements.messages.appendChild(loadingElement);
+                this.smoothScrollToBottom();
+            } else {
+                // Delay loading animation for user messages
+                setTimeout(() => {
+                    if (!this.isLoading) return; // Check if still loading
+                    const loadingElement = this.createLoadingAnimation();
+                    loadingElement.style.opacity = '0';
+                    this.elements.messages.appendChild(loadingElement);
+
+                    // Force a reflow before starting the transition
+                    loadingElement.offsetHeight;
+
+                    loadingElement.style.transition = 'opacity 0.3s ease-in-out';
+                    loadingElement.style.opacity = '1';
+
+                    this.smoothScrollToBottom();
+                }, 400);
+            }
+        }
+    }
     async getPageContent() {
         if (this.pageContent) return this.pageContent;
 
@@ -136,7 +202,7 @@ class PageAssistant {
             const response = await chrome.runtime.sendMessage({
                 type: 'MAKE_API_REQUEST',
                 data: {
-                    content: this.pageContent,  // Send the page content instead of system prompt
+                    content: this.pageContent,
                     messages: [
                         {
                             role: 'user',
@@ -171,17 +237,21 @@ class PageAssistant {
                 console.error('Error parsing follow-up questions:', error);
             }
         }
-
         return { mainResponse, followUpQuestions };
     }
 
     async processQuestion(question = '', isInitialLoad = false) {
         try {
+            this.isInitialLoad = isInitialLoad;
+
             if (!isInitialLoad) {
-                this.addMessage(question, 'user-message');
+                const messageElement = this.addMessage(question, 'user-message');
+                this.smoothScrollToBottom();
+                this.setLoading(true, false);
             }
 
             if (!this.pageContent) {
+                this.setLoading(true, true);
                 this.pageContent = await this.getPageContent();
                 this.systemPrompt = this.config.PROMPTS.SYSTEM(this.pageContent);
             }
@@ -192,6 +262,8 @@ class PageAssistant {
 
             const response = await this.makeApiRequest(userPrompt);
             const { mainResponse, followUpQuestions } = this.parseResponse(response);
+
+            this.setLoading(false);
 
             if (isInitialLoad) {
                 this.addMessage(
@@ -207,6 +279,7 @@ class PageAssistant {
             }
         } catch (error) {
             console.error('Error processing question:', error);
+            this.setLoading(false);
             this.addMessage(
                 `Error: ${error.message}. ${this.config.UI_TEXT.ERRORS.GENERIC}`,
                 'assistant-message error'
@@ -217,10 +290,8 @@ class PageAssistant {
     async handleQuestion() {
         const question = this.elements.input.value.trim();
         if (question) {
-            this.setLoading(true);
             this.elements.input.value = '';
             await this.processQuestion(question);
-            this.setLoading(false);
         }
     }
 
