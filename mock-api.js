@@ -7,7 +7,7 @@ export const TEST_RESPONSES = {
     "content": [
       {
         "type": "text",
-        "text": "This appears to be a Chrome extension called 'Page Assistant' that creates an interactive side panel for webpage content analysis. The extension includes several key components:\n\n1. A manifest file configuring the extension's permissions and structure\n2. UI components with styles for a chat-like interface\n3. Background scripts for handling API communication\n4. A sidepanel implementation for user interactions\n5. Integration with the Anthropic API for content analysis\n\nThe extension allows users to ask questions about webpage content and receive AI-powered responses with follow-up suggestions.\n\n[\"What security measures and permissions does the extension require?\", \"How does the extension handle the communication between the frontend and the Anthropic API?\", \"What are the key UI components and how do they enhance user experience?\"]"
+        "text": "This appears to be a Chrome extension called 'Page Assistant' that creates an interactive side panel for webpage content analysis. The extension includes several key components:\n- A manifest file configuring the extension's permissions and structure\n- UI components with styles for a chat-like interface\n- Background scripts for handling API communication\n1. somewe nested list\n2. another nested list\n3. hwfiajfajkrfn\n- jkawrbfjer\n- A sidepanel imple\n1. mentation for user int\n2. eractions\n- Integration with the Anthropic API for content analysis\n\nThe extension allows users to ask questions about webpage content and receive AI-powered responses with follow-up suggestions.\n\n[\"What security measures and permissions does the extension require?\", \"How does the extension handle the communication between the frontend and the Anthropic API?\", \"What are the key UI components and how do they enhance user experience?\"]"
       }
     ]
   },
@@ -19,7 +19,7 @@ export const TEST_RESPONSES = {
     "content": [
       {
         "type": "text",
-        "text": "I've analyzed the content and here's what I found:\n\nThis appears to be some webpage content that you'd like to understand better. I'll help you break it down and explore its key points.\n\n[\"Would you like to explore any specific aspect?\", \"Should we analyze the main topics in detail?\", \"What particular part interests you the most?\"]"
+        "text": "I've analyzed the content and here's what I found:\n\n1. This appears to be s\n- ome webpage con\n-tent that y\n2. ou'd like to under\n-stand better.\n- I'll help you break it down\n3. and explore its key points.\n\n[\"Would you like to explore any specific aspect?\", \"Should we analyze the main topics in detail?\", \"What particular part interests you the most?\"]"
       }
     ]
   },

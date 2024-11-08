@@ -17,7 +17,8 @@
       "resources": [
         "styles.css",
         "constants.js",
-        "mock-api.js"
+        "mock-api.js",
+        "formatter.js"
       ],
       "matches": [
         "<all_urls>"

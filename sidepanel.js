@@ -1,4 +1,5 @@
 import { CONFIG } from "./constants.js"
+import { addFormattedMessage } from "./formatter.js";
 
 class PageAssistant {
     constructor(config) {
@@ -37,15 +38,11 @@ class PageAssistant {
     }
 
     addMessage(text, className) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${className}`;
-        messageDiv.textContent = text;
-
-        this.elements.messages.appendChild(messageDiv);
+        const messageDiv = addFormattedMessage(this.elements.messages, text, className);
         this.smoothScrollToBottom();
-
         return messageDiv;
     }
+
 
     addFollowUpQuestions(questions) {
         if (this.isInitialLoad) {
@@ -59,14 +56,7 @@ class PageAssistant {
                 button.textContent = question;
                 button.addEventListener('click', () => {
                     if (!button.disabled) {
-                        // Remove selected class from all buttons and enable them
-                        const allButtons = document.querySelectorAll('.follow-up-button');
-                        allButtons.forEach(btn => {
-                            btn.classList.remove('selected');
-                            btn.disabled = false;
-                        });
-
-                        // Add selected class to clicked button and disable it
+                        // Add selected class to clicked button and disable only this button
                         button.classList.add('selected');
                         button.disabled = true;
 
@@ -93,14 +83,7 @@ class PageAssistant {
                     button.textContent = question;
                     button.addEventListener('click', () => {
                         if (!button.disabled) {
-                            // Remove selected class from all buttons and enable them
-                            const allButtons = document.querySelectorAll('.follow-up-button');
-                            allButtons.forEach(btn => {
-                                btn.classList.remove('selected');
-                                btn.disabled = false;
-                            });
-
-                            // Add selected class to clicked button and disable it
+                            // Add selected class to clicked button and disable only this button
                             button.classList.add('selected');
                             button.disabled = true;
 
@@ -254,7 +237,6 @@ class PageAssistant {
                 console.error('Error parsing follow-up questions:', error);
             }
         }
-
         return { mainResponse, followUpQuestions };
     }
 

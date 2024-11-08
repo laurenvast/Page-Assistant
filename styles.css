@@ -41,13 +41,6 @@ body {
   height: 100vh;
 }
 
-#messages {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: var(--spacing-md);
-  padding-bottom: 4em;
-}
-
 #input-container {
   display: flex;
   gap: var(--spacing-sm);
@@ -81,12 +74,35 @@ body {
   text-align: center;
 }
 
-/* Message styles */
+
+#messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  padding-bottom: 4em;
+}
+
 .message {
-  white-space: pre-wrap;
+  /* white-space: pre-wrap; */
   word-break: break-word;
   margin-bottom: var(--spacing-md);
 }
+
+.message ol,
+.message ul {
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+.message li {
+  margin: 0.25em 0;
+}
+
+.message li>ol,
+.message li>ul {
+  margin: 0.25em 0;
+}
+
 
 .welcome-message {
   background-color: #e3f2fd;
@@ -111,6 +127,7 @@ body {
   color: rgba(0, 0, 0, 0.8);
 }
 
+/* Rest of the existing CSS remains the same */
 .error {
   background-color: #ffebee;
   border: 1px solid var(--color-error);
@@ -165,7 +182,7 @@ body {
 
 .follow-up-button:not(.selected):hover::before {
   transform: translateY(-50%) translateX(3px);
-  opacity: 0.8;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgb(25, 118, 210)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'%3E%3C/line%3E%3Cpolyline points='12 5 19 12 12 19'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
 .follow-up-button.selected {
