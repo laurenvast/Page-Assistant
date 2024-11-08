@@ -206,7 +206,7 @@ class PageAssistant {
                     messages: [
                         {
                             role: 'user',
-                            content: userPrompt
+                            content: userPrompt || 'Please provide a concise summary of the main points in this content.'
                         }
                     ]
                 }
@@ -253,14 +253,10 @@ class PageAssistant {
             if (!this.pageContent) {
                 this.setLoading(true, true);
                 this.pageContent = await this.getPageContent();
-                this.systemPrompt = this.config.PROMPTS.SYSTEM(this.pageContent);
             }
 
-            const userPrompt = isInitialLoad ?
-                this.config.PROMPTS.INITIAL_QUESTION :
-                this.config.PROMPTS.FORMAT_USER_QUESTION(question);
-
-            const response = await this.makeApiRequest(userPrompt);
+            // Send the request with just the question or empty string for initial load
+            const response = await this.makeApiRequest(question);
             const { mainResponse, followUpQuestions } = this.parseResponse(response);
 
             this.setLoading(false);
