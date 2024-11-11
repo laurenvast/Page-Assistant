@@ -1,5 +1,5 @@
 import { getMockResponse } from './mock-api.js';
-const IS_DEVELOPMENT = true; // Toggle this for development/production
+const IS_DEVELOPMENT = false; // Toggle this for development/production
 
 const API_CONFIG = {
   ENDPOINT: 'https://api-backend-gamma-two.vercel.app/api/chat'
