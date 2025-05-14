@@ -224,7 +224,19 @@ class PageAssistant {
     }
 
     parseResponse(response) {
-        const fullResponse = response.content[0].text;
+        // Handle OpenAI API response format
+        let fullResponse;
+        if (response.choices && response.choices[0] && response.choices[0].message) {
+            // This is the OpenAI API format
+            fullResponse = response.choices[0].message.content;
+        } else if (response.content && response.content[0] && response.content[0].text) {
+            // This is the original format
+            fullResponse = response.content[0].text;
+        } else {
+            console.error('Unexpected response format:', response);
+            return { mainResponse: 'Error: Unexpected response format', followUpQuestions: [] };
+        }
+        
         let mainResponse = fullResponse;
         let followUpQuestions = [];
 
