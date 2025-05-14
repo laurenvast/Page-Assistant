@@ -1,8 +1,9 @@
 import { getMockResponse } from './mock-api.js';
+import { CONFIG } from './constants.js';
 const IS_DEVELOPMENT = false; // Toggle this for development/production
 
 const API_CONFIG = {
-  ENDPOINT: 'https://api-backend-gamma-two.vercel.app/api/chat'
+  ENDPOINT: 'https://openai-server-lauren.vercel.app/api/chat'
 };
 
 // Handle messages from sidepanel
@@ -53,10 +54,15 @@ async function handleApiRequest({ content, messages }) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-project-name': 'PageAssis'
       },
       body: JSON.stringify({
-        content: content,  // Send the page content
-        messages: messages
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: CONFIG.PROMPTS.SYSTEM(content) },
+          ...messages
+        ],
+        max_tokens: 1024
       })
     });
 
