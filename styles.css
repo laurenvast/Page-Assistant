@@ -90,6 +90,20 @@ body {
   padding-top: 5em;
 }
 
+::-webkit-scrollbar {
+  width: .5em;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: none;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, .2);
+  border-radius: 999px;
+}
+
 .message {
   /* white-space: pre-wrap; */
   word-break: break-word;
@@ -113,11 +127,16 @@ body {
 
 
 .welcome-message {
-  background-color: #e3f2fd;
-  padding: var(--spacing-md);
-  border-radius: var(--border-radius-large);
+  /* background-color: #e3f2fd; */
+  /* padding: var(--spacing-md); */
+  /* border-radius: var(--border-radius-large); */
   margin-bottom: var(--spacing-md);
-  border-left: 4px solid var(--color-primary);
+  font-size: 1.5em;
+  font-weight: bolder;
+  background-image: var(--gradient-primary);
+  color: transparent;
+  background-clip: text;
+  /* border-left: 4px solid var(--color-primary); */
 }
 
 .user-message {
@@ -414,6 +433,8 @@ button:disabled {
   top: 0;
   border-radius: 100px;
   width: calc(100% - var(--spacing-md) * 4);
+  box-shadow: 0 .25em 2em 0 rgba(0, 0, 0, 0.15);
+
 
 }
 

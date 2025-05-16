@@ -9,8 +9,8 @@ export const CONFIG = {
     },
     UI_TEXT: {
         WELCOME_MESSAGE: {
-            GREETING: '👋 Welcome to Page Assistant!',
-            SUBTITLE: 'Here\'s what I found on this page:',
+            GREETING: '👋',
+            SUBTITLE: 'Welcome to Page Assistant!',
         },
         BUTTON: {
             ASK: 'Ask',
