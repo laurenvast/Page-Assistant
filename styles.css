@@ -128,6 +128,15 @@ body {
   color: rgba(0, 0, 0, 0.8);
 }
 
+.system-message {
+  background-color: #e8f5e9;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-large);
+  color: rgba(0, 0, 0, 0.8);
+  border-left: 4px solid #4caf50;
+  font-style: italic;
+}
+
 /* Rest of the existing CSS remains the same */
 .error {
   background-color: #ffebee;
@@ -396,6 +405,11 @@ button:disabled {
   z-index: 10;
 }
 
+.tab-header .buttons-container {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
 .tab-title {
   font-weight: 500;
   color: var(--color-primary-dark);
@@ -419,8 +433,7 @@ button:disabled {
   font-weight: 400;
 }
 
-.return-button {
-  background-color: var(--color-primary);
+.return-button, .refresh-button {
   color: white;
   border: none;
   border-radius: var(--border-radius-medium);
@@ -435,15 +448,31 @@ button:disabled {
   align-items: center;
   justify-content: center;
   min-width: 100px;
+  margin-left: var(--spacing-xs);
 }
 
-.return-button:hover {
-  background-color: var(--color-primary-dark);
+.return-button {
+  background-color: var(--color-primary);
+}
+
+.refresh-button {
+  background-color: #4caf50; /* Green color for refresh */
+}
+
+.return-button:hover, .refresh-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
-.return-button:active {
+.return-button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.refresh-button:hover {
+  background-color: #388e3c; /* Darker green on hover */
+}
+
+.return-button:active, .refresh-button:active {
   transform: translateY(1px);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }

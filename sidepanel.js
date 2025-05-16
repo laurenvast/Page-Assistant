@@ -8,7 +8,9 @@ class PageAssistant {
         this.systemPrompt = null;
         this.isInitialLoad = true;
         this.originalTab = null;
+        this.currentTab = null;
         this.originalTabInfoSet = false; // Flag to track if we've already set the original tab info
+        this.usingOriginalTab = true; // Flag to track if we're using the original tab content
 
         // Cache DOM elements
         this.elements = {
@@ -25,6 +27,7 @@ class PageAssistant {
         this.handleQuestion = this.handleQuestion.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
         this.navigateToOriginalTab = this.navigateToOriginalTab.bind(this);
+        this.refreshWithCurrentTab = this.refreshWithCurrentTab.bind(this);
 
         this.loadingTimeout = null;
         this.isLoading = false;  // Add this to track loading state
@@ -52,10 +55,26 @@ class PageAssistant {
         this.elements.returnButton.textContent = 'Return to Tab';
         this.elements.returnButton.style.display = 'none';
         this.elements.returnButton.addEventListener('click', this.navigateToOriginalTab);
+        
+        // Create refresh button for current tab
+        this.elements.refreshButton = document.createElement('button');
+        this.elements.refreshButton.id = 'refresh-button';
+        this.elements.refreshButton.className = 'refresh-button';
+        this.elements.refreshButton.textContent = 'Use Current Tab';
+        this.elements.refreshButton.style.display = 'none';
+        this.elements.refreshButton.addEventListener('click', this.refreshWithCurrentTab);
 
+        // Create a container for the buttons
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.className = 'buttons-container';
+        
+        // Add buttons to the container
+        buttonsContainer.appendChild(this.elements.refreshButton);
+        buttonsContainer.appendChild(this.elements.returnButton);
+        
         // Add elements to header
         headerContainer.appendChild(this.elements.tabTitle);
-        headerContainer.appendChild(this.elements.returnButton);
+        headerContainer.appendChild(buttonsContainer);
 
         // Insert header at the top of chat container
         const chatContainer = document.getElementById('chat-container');
@@ -68,7 +87,7 @@ class PageAssistant {
         window.addEventListener('focus', () => {
             console.log('Sidepanel gained focus, updating tab status');
             this.checkTabStatus();
-            this.updateReturnButtonVisibility();
+            this.updateButtonVisibility();
         });
 
         // Set up listener for tab status change messages from background script
@@ -86,7 +105,7 @@ class PageAssistant {
                 } else if (message.changeType === 'tab-activated') {
                     // A tab was activated, check if we need to show/hide the return button
                     console.log('Tab activated, updating return button visibility');
-                    this.updateReturnButtonVisibility();
+                    this.updateButtonVisibility();
                 }
 
                 // Send a response to acknowledge receipt
@@ -110,10 +129,11 @@ class PageAssistant {
     }
 
     handleVisibilityChange() {
-        if (document.visibilityState === 'visible' && this.originalTab) {
-            // Immediately check tab status and update UI when visibility changes
+        if (!document.hidden) {
+            // When the sidepanel becomes visible, check tab status
+            console.log('Sidepanel became visible, updating tab status');
             this.checkTabStatus();
-            this.updateReturnButtonVisibility();
+            this.updateButtonVisibility();
         }
     }
 
@@ -214,29 +234,37 @@ class PageAssistant {
         } else {
             console.log('Using existing original tab info:', this.originalTab?.title);
             // Just check if we need to show the return button
-            this.updateReturnButtonVisibility();
+            this.updateButtonVisibility();
         }
     }
 
-    updateReturnButtonVisibility() {
-        if (this.originalTab) {
-            // First check if the original tab still exists
-            chrome.tabs.get(this.originalTab.id, (tab) => {
-                const tabExists = !chrome.runtime.lastError;
-
-                // Then check if we're currently on a different tab
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    const onDifferentTab = tabs.length > 0 && (!tabExists || tabs[0].id !== this.originalTab.id);
-
-                    if (onDifferentTab) {
-                        // Show the button if we're on a different tab or the original tab no longer exists
+    updateButtonVisibility() {
+        // Check if we have an original tab and if the current active tab is different
+        if (this.originalTab && this.originalTab.id) {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs.length > 0) {
+                    const currentTab = tabs[0];
+                    this.currentTab = currentTab;
+                    const isDifferentTab = currentTab.id !== this.originalTab.id;
+                    console.log('Current tab:', currentTab.id, 'Original tab:', this.originalTab.id, 'Different:', isDifferentTab);
+                    
+                    if (isDifferentTab) {
+                        // If we're on a different tab than the reference tab
+                        // Always show both buttons regardless of whether we're using original tab or not
                         this.elements.returnButton.style.display = 'block';
+                        this.elements.refreshButton.style.display = 'block';
                     } else {
-                        // Hide the button if we're on the original tab
+                        // We're on the same tab as the reference tab
+                        // Hide both buttons
                         this.elements.returnButton.style.display = 'none';
+                        this.elements.refreshButton.style.display = 'none';
                     }
-                });
+                }
             });
+        } else {
+            // No original tab, hide the buttons
+            this.elements.returnButton.style.display = 'none';
+            this.elements.refreshButton.style.display = 'none';
         }
     }
 
@@ -307,7 +335,6 @@ class PageAssistant {
         return messageDiv;
     }
 
-
     addFollowUpQuestions(questions) {
         if (this.isInitialLoad) {
             // Add follow-ups immediately without animation during initial load
@@ -373,6 +400,7 @@ class PageAssistant {
             }, 500);
         }
     }
+
     createLoadingAnimation() {
         const loadingHTML = `
             <div class="loading-animation">
@@ -432,29 +460,46 @@ class PageAssistant {
             }
         }
     }
+
     async getPageContent() {
-        if (this.pageContent) return this.pageContent;
-
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab) throw new Error(this.config.UI_TEXT.ERRORS.NO_TAB);
+            // Determine which tab to use based on the usingOriginalTab flag
+            const targetTab = this.usingOriginalTab ? this.originalTab : this.currentTab;
+            
+            // If we have a target tab, use that
+            if (targetTab && targetTab.id) {
+                const response = await chrome.runtime.sendMessage({
+                    type: 'GET_PAGE_CONTENT',
+                    tabId: targetTab.id
+                });
 
-            const response = await chrome.runtime.sendMessage({
-                type: 'GET_PAGE_CONTENT',
-                tabId: tab.id
-            });
+                if (response.success) {
+                    return response.data;
+                } else {
+                    throw new Error(response.error || 'Failed to get page content');
+                }
+            } else {
+                // If we don't have a target tab, get the active tab
+                const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tabs.length > 0) {
+                    const activeTab = tabs[0];
+                    // Update our current tab reference
+                    this.currentTab = activeTab;
+                    
+                    const response = await chrome.runtime.sendMessage({
+                        type: 'GET_PAGE_CONTENT',
+                        tabId: activeTab.id
+                    });
 
-            if (!response.success) {
-                throw new Error(response.error);
+                    if (response.success) {
+                        return response.data;
+                    } else {
+                        throw new Error(response.error || 'Failed to get page content');
+                    }
+                } else {
+                    throw new Error('No active tab found');
+                }
             }
-
-            if (!response.data) {
-                throw new Error(this.config.UI_TEXT.ERRORS.NO_CONTAINER(this.config.SELECTORS.TARGET_CONTAINER));
-            }
-
-            this.pageContent = response.data;
-            console.log('Content retrieved:', response.data.substring(0, 100) + '...');
-            return response.data;
         } catch (error) {
             console.error('Error getting page content:', error);
             throw error;
@@ -576,11 +621,46 @@ class PageAssistant {
             this.handleQuestion();
         }
     }
-
+    
+    async refreshWithCurrentTab() {
+        try {
+            // Reset the chat and start with the current tab content
+            this.usingOriginalTab = false;
+            this.pageContent = null;
+            this.systemPrompt = null;
+            
+            // Clear existing messages
+            if (this.elements.messages) {
+                this.elements.messages.innerHTML = '';
+            }
+            
+            // Update tab title and button visibility
+            if (this.elements.tabTitle && this.currentTab) {
+                this.elements.tabTitle.textContent = this.currentTab.title || 'Unknown Page';
+                
+                // Store the current tab as the new reference tab
+                // This will be used to detect if the user navigates away again
+                this.originalTab = {...this.currentTab};
+                console.log('New reference tab set:', this.originalTab.id, this.originalTab.title);
+            }
+            
+            this.updateButtonVisibility();
+            
+            // Process initial question with new tab content
+            await this.processQuestion('', true);
+            
+            // Add a message indicating we've switched to the current tab
+            this.addMessage('Now using content from the current tab.', 'system-message');
+        } catch (error) {
+            console.error('Error refreshing with current tab:', error);
+            this.addMessage(`Error: ${error.message}. Failed to refresh with current tab content.`, 'error');
+        }
+    }
+    
     async initialize() {
         try {
             this.setLoading(true);
-
+            
             // Get tab information
             this.updateTabInfo();
 
