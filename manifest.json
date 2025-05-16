@@ -6,7 +6,9 @@
   "permissions": [
     "sidePanel",
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs",
+    "storage"
   ],
   "host_permissions": [
     "https://*/*",
@@ -34,5 +36,6 @@
   },
   "action": {
     "default_title": "Open Page Assistant"
-  }
+  },
+  "options_page": "options.html"
 }

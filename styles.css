@@ -13,12 +13,16 @@
   --color-primary: #1976d2;
   --color-primary-light: #e3f2fd;
   --color-primary-dark: #1565c0;
+  --color-text-primary: #303030;
+  --color-text-secondary: #757575;
   --color-background: #fff;
   --color-background-secondary: #f9f9f9;
   --color-border: #e0e0e0;
   --color-text: #333;
   --color-success: #2ecc71;
   --color-error: #e74c3c;
+  --gradient-primary: linear-gradient(135deg, #005DFF 0%, #9F3ADD 100%);
+  --gradient-secondary: linear-gradient(135deg, #F3E4FC 0%, #D4E2FA 100%);
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Nokora:wght@100;300;400;700;900&display=swap');
@@ -39,6 +43,8 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
+  background: var(--gradient-secondary);
 }
 
 #input-container {
@@ -50,7 +56,7 @@ body {
   bottom: 0;
   background: white;
   border-radius: 100px;
-  width: calc(100vw - 32px);
+  width: calc(100% - var(--spacing-md) * 4);
   overflow: hidden;
   align-items: center;
   box-shadow: var(--color-border) 0 .25em 2em 0;
@@ -72,6 +78,7 @@ body {
   padding: var(--spacing-sm);
   font-size: 1em;
   text-align: center;
+  background: var(--gradient-primary);
 }
 
 
@@ -80,6 +87,21 @@ body {
   overflow-y: auto;
   padding: var(--spacing-md);
   padding-bottom: 4em;
+  padding-top: 5em;
+}
+
+::-webkit-scrollbar {
+  width: .5em;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: none;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, .2);
+  border-radius: 999px;
 }
 
 .message {
@@ -105,15 +127,20 @@ body {
 
 
 .welcome-message {
-  background-color: #e3f2fd;
-  padding: var(--spacing-md);
-  border-radius: var(--border-radius-large);
+  /* background-color: #e3f2fd; */
+  /* padding: var(--spacing-md); */
+  /* border-radius: var(--border-radius-large); */
   margin-bottom: var(--spacing-md);
-  border-left: 4px solid var(--color-primary);
+  font-size: 1.5em;
+  font-weight: bolder;
+  background-image: var(--gradient-primary);
+  color: transparent;
+  background-clip: text;
+  /* border-left: 4px solid var(--color-primary); */
 }
 
 .user-message {
-  background-color: var(--color-primary);
+  background: var(--gradient-primary);
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius-large);
   line-height: 125%;
@@ -121,10 +148,19 @@ body {
 }
 
 .assistant-message {
-  background-color: #f5f5f5;
+  /* background-color: #f5f5f5; */
+  /* padding: var(--spacing-sm) var(--spacing-md); */
+  /* border-radius: var(--border-radius-large); */
+  color: var(--color-text-primary);
+}
+
+.system-message {
+  background-color: #e8f5e9;
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius-large);
   color: rgba(0, 0, 0, 0.8);
+  border-left: 4px solid #4caf50;
+  font-style: italic;
 }
 
 /* Rest of the existing CSS remains the same */
@@ -175,7 +211,7 @@ body {
 }
 
 .follow-up-button:not(.selected):hover {
-  background-color: var(--color-primary-light);
+  background: var(--gradient-secondary);
   color: rgba(0, 0, 0, 0.8);
   border-color: var(--color-primary-light);
 }
@@ -379,6 +415,230 @@ button:disabled {
     --x: 50%;
     --y: 50%;
     opacity: 0.8;
+  }
+}
+
+/* Tab header styles */
+.tab-header {
+  display: flex;
+  /* justify-content: space-between; */
+  align-items: center;
+  width: calc(100% - var(--spacing-sm) * 4);
+  z-index: 10;
+  margin: var(--spacing-md);
+  position: fixed;
+  top: 0;
+  gap: var(--spacing-md);
+  max-width: 100%;
+  transition: transform 0.3s ease;
+}
+
+/* Class to hide the header when scrolling down */
+.tab-header.hidden {
+  transform: translateY(-150%);
+}
+
+/* When on a different tab, make the header more noticeable */
+.tab-header.different-tab {}
+
+.tab-header .tab-container {
+  display: flex;
+  align-items: center;
+  background: white;
+  gap: var(--spacing-sm);
+  border-radius: 999px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  box-shadow: 0 .25em 2em 0 rgba(0, 0, 0, 0.15);
+  flex: 1;
+  min-width: 0;
+  /* Important for flexbox to allow shrinking below content size */
+  overflow: hidden;
+  transition: width 2s ease;
+
+}
+
+.tab-favicon {
+  width: 1.5em;
+  height: 1.5em;
+  flex-shrink: 0;
+}
+
+.tab-favicon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tab-title {
+  color: var(--color-text-primary);
+  overflow: hidden;
+  font-size: 0.9em;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  /* Important for flexbox text overflow */
+}
+
+.tab-title-text {
+  font-weight: bold;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tab-domain {
+  font-size: 0.8em;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  line-height: 1rem;
+}
+
+.return-button {
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: 999px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  margin-left: var(--spacing-xs);
+  flex-shrink: 0;
+  background: var(--gradient-secondary);
+  display: none;
+  /* Hidden by default */
+}
+
+.refresh-button {
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 3em;
+  height: 3em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  background: var(--gradient-primary);
+  box-shadow: 0 .25em 2em 0 rgba(0, 0, 0, 0.15);
+  overflow: visible;
+  display: none;
+  /* Hidden by default */
+}
+
+.refresh-button svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+  z-index: 1;
+}
+
+.refresh-favicon {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  bottom: -.3rem;
+  right: -.3rem;
+  z-index: 2;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0px 0 2px white;
+  overflow: hidden;
+}
+
+.refresh-favicon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.return-button:hover,
+.refresh-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.return-button:hover {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.refresh-button.visible:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  filter: brightness(1.1);
+}
+
+.return-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.refresh-button.visible:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Visibility classes and animations */
+.return-button.visible {
+  display: flex;
+}
+
+.refresh-button {
+  transform: translateX(-50px);
+  /* Start position off-screen */
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.refresh-button.visible {
+  display: flex;
+  transform: translateX(0);
+  /* End position */
+  opacity: 1;
+}
+
+/* Rotation animation for the refresh icon */
+.refresh-button.visible svg {
+  animation: rotateRefreshIcon 0.8s ease-in-out;
+}
+
+@keyframes rotateRefreshIcon {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Add spin animation on hover */
+.refresh-button.visible:hover svg {
+  animation: rotateRefreshIconHover 0.8s ease-in-out;
+}
+
+@keyframes rotateRefreshIconHover {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
