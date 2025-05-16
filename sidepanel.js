@@ -55,7 +55,7 @@ class PageAssistant {
         this.elements.returnButton.textContent = 'Return to Tab';
         this.elements.returnButton.style.display = 'none';
         this.elements.returnButton.addEventListener('click', this.navigateToOriginalTab);
-        
+
         // Create refresh button for current tab
         this.elements.refreshButton = document.createElement('button');
         this.elements.refreshButton.id = 'refresh-button';
@@ -67,11 +67,11 @@ class PageAssistant {
         // Create a container for the buttons
         const buttonsContainer = document.createElement('div');
         buttonsContainer.className = 'buttons-container';
-        
+
         // Add buttons to the container
-        buttonsContainer.appendChild(this.elements.refreshButton);
         buttonsContainer.appendChild(this.elements.returnButton);
-        
+        buttonsContainer.appendChild(this.elements.refreshButton);
+
         // Add elements to header
         headerContainer.appendChild(this.elements.tabTitle);
         headerContainer.appendChild(buttonsContainer);
@@ -247,7 +247,7 @@ class PageAssistant {
                     this.currentTab = currentTab;
                     const isDifferentTab = currentTab.id !== this.originalTab.id;
                     console.log('Current tab:', currentTab.id, 'Original tab:', this.originalTab.id, 'Different:', isDifferentTab);
-                    
+
                     if (isDifferentTab) {
                         // If we're on a different tab than the reference tab
                         // Always show both buttons regardless of whether we're using original tab or not
@@ -465,7 +465,7 @@ class PageAssistant {
         try {
             // Determine which tab to use based on the usingOriginalTab flag
             const targetTab = this.usingOriginalTab ? this.originalTab : this.currentTab;
-            
+
             // If we have a target tab, use that
             if (targetTab && targetTab.id) {
                 const response = await chrome.runtime.sendMessage({
@@ -485,7 +485,7 @@ class PageAssistant {
                     const activeTab = tabs[0];
                     // Update our current tab reference
                     this.currentTab = activeTab;
-                    
+
                     const response = await chrome.runtime.sendMessage({
                         type: 'GET_PAGE_CONTENT',
                         tabId: activeTab.id
@@ -621,34 +621,60 @@ class PageAssistant {
             this.handleQuestion();
         }
     }
-    
+
     async refreshWithCurrentTab() {
         try {
             // Reset the chat and start with the current tab content
             this.usingOriginalTab = false;
             this.pageContent = null;
             this.systemPrompt = null;
-            
+
             // Clear existing messages
             if (this.elements.messages) {
                 this.elements.messages.innerHTML = '';
             }
-            
+
             // Update tab title and button visibility
             if (this.elements.tabTitle && this.currentTab) {
-                this.elements.tabTitle.textContent = this.currentTab.title || 'Unknown Page';
+                // Extract domain from URL
+                let domain = '';
+                if (this.currentTab.url) {
+                    try {
+                        const url = new URL(this.currentTab.url);
+                        domain = url.hostname;
+                    } catch (e) {
+                        console.error('Error parsing URL:', e);
+                    }
+                }
+                
+                // Clear the tab title element first
+                this.elements.tabTitle.innerHTML = '';
+                
+                // Create title span
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'tab-title-text';
+                titleSpan.textContent = this.currentTab.title || 'Unknown Page';
+                this.elements.tabTitle.appendChild(titleSpan);
+                
+                // Create domain span
+                if (domain) {
+                    const domainSpan = document.createElement('span');
+                    domainSpan.className = 'tab-domain';
+                    domainSpan.textContent = domain;
+                    this.elements.tabTitle.appendChild(domainSpan);
+                }
                 
                 // Store the current tab as the new reference tab
                 // This will be used to detect if the user navigates away again
-                this.originalTab = {...this.currentTab};
+                this.originalTab = { ...this.currentTab };
                 console.log('New reference tab set:', this.originalTab.id, this.originalTab.title);
             }
-            
+
             this.updateButtonVisibility();
-            
+
             // Process initial question with new tab content
             await this.processQuestion('', true);
-            
+
             // Add a message indicating we've switched to the current tab
             this.addMessage('Now using content from the current tab.', 'system-message');
         } catch (error) {
@@ -656,11 +682,11 @@ class PageAssistant {
             this.addMessage(`Error: ${error.message}. Failed to refresh with current tab content.`, 'error');
         }
     }
-    
+
     async initialize() {
         try {
             this.setLoading(true);
-            
+
             // Get tab information
             this.updateTabInfo();
 

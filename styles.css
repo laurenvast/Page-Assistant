@@ -13,12 +13,15 @@
   --color-primary: #1976d2;
   --color-primary-light: #e3f2fd;
   --color-primary-dark: #1565c0;
+  --color-text-primary: #303030;
+  --color-text-secondary: #757575;
   --color-background: #fff;
   --color-background-secondary: #f9f9f9;
   --color-border: #e0e0e0;
   --color-text: #333;
   --color-success: #2ecc71;
   --color-error: #e74c3c;
+  --gradient-primary: linear-gradient(135deg, #005DFF 0%, #9F3ADD 100%);
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Nokora:wght@100;300;400;700;900&display=swap');
@@ -403,6 +406,8 @@ button:disabled {
   position: sticky;
   top: 0;
   z-index: 10;
+  gap: var(--spacing-sm);
+
 }
 
 .tab-header .buttons-container {
@@ -410,16 +415,28 @@ button:disabled {
   gap: var(--spacing-xs);
 }
 
+.tab-favicon {
+  width: 1.5em;
+  height: 1.5em;
+}
+
+.tab-favicon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .tab-title {
-  font-weight: 500;
-  color: var(--color-primary-dark);
+  font-weight: bold;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 80%;
+  /* max-width: 80%; */
   font-size: 0.9em;
   display: flex;
   flex-direction: column;
+  flex-grow: 2;
 }
 
 .tab-title-text {
@@ -433,46 +450,50 @@ button:disabled {
   font-weight: 400;
 }
 
-.return-button, .refresh-button {
-  color: white;
+.return-button,
+.refresh-button {
+  color: var(--color-text-primary);
   border: none;
-  border-radius: var(--border-radius-medium);
-  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: 999px;
+  padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
   font-size: 0.85em;
   transition: all 0.2s ease;
   position: relative;
-  z-index: 20; /* Ensure it's above other elements */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 100px;
   margin-left: var(--spacing-xs);
+  flex-shrink: 0;
 }
 
 .return-button {
-  background-color: var(--color-primary);
+  background: white;
 }
 
 .refresh-button {
-  background-color: #4caf50; /* Green color for refresh */
+  background: var(--gradient-primary);
+  color: white;
 }
 
-.return-button:hover, .refresh-button:hover {
+.return-button:hover,
+.refresh-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 .return-button:hover {
-  background-color: var(--color-primary-dark);
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .refresh-button:hover {
-  background-color: #388e3c; /* Darker green on hover */
+  background-color: #388e3c;
+  /* Darker green on hover */
 }
 
-.return-button:active, .refresh-button:active {
+.return-button:active,
+.refresh-button:active {
   transform: translateY(1px);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
