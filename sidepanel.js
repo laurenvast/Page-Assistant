@@ -64,7 +64,6 @@ class PageAssistant {
         this.elements.returnButton.id = 'return-button';
         this.elements.returnButton.className = 'return-button';
         this.elements.returnButton.textContent = 'Return to Tab';
-        this.elements.returnButton.style.display = 'none';
         this.elements.returnButton.addEventListener('click', this.navigateToOriginalTab);
 
         // Create refresh button for current tab
@@ -72,18 +71,17 @@ class PageAssistant {
         this.elements.refreshButton.id = 'refresh-button';
         this.elements.refreshButton.className = 'refresh-button';
         this.elements.refreshButton.title = 'Use Current Tab';
-        this.elements.refreshButton.style.display = 'none';
         this.elements.refreshButton.addEventListener('click', this.refreshWithCurrentTab);
 
         // Create favicon container for refresh button
         this.elements.refreshButtonFavicon = document.createElement('div');
         this.elements.refreshButtonFavicon.className = 'refresh-favicon';
-        
+
         // Create favicon image element for refresh button
         const refreshFaviconImg = document.createElement('img');
         refreshFaviconImg.alt = '';
         this.elements.refreshButtonFavicon.appendChild(refreshFaviconImg);
-        
+
         // Create SVG icon for refresh button
         const refreshSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         refreshSvg.setAttribute('width', '18');
@@ -107,17 +105,20 @@ class PageAssistant {
         this.elements.refreshButton.appendChild(refreshSvg);
 
         // Create a container for the buttons
-        const buttonsContainer = document.createElement('div');
-        buttonsContainer.className = 'buttons-container';
+        const tabContainer = document.createElement('div');
+        tabContainer.className = 'tab-container';
 
         // Add buttons to the container
-        buttonsContainer.appendChild(this.elements.returnButton);
-        buttonsContainer.appendChild(this.elements.refreshButton);
+        // tabContainer.appendChild(this.elements.returnButton);
+        // tabContainer.appendChild(this.elements.refreshButton);
+
+        headerContainer.appendChild(this.elements.refreshButton);
+        headerContainer.appendChild(tabContainer);
 
         // Add elements to header
-        headerContainer.appendChild(this.elements.tabFavicon);
-        headerContainer.appendChild(this.elements.tabTitle);
-        headerContainer.appendChild(buttonsContainer);
+        tabContainer.appendChild(this.elements.tabFavicon);
+        tabContainer.appendChild(this.elements.tabTitle);
+        tabContainer.appendChild(this.elements.returnButton);
 
         // Insert header at the top of chat container
         const chatContainer = document.getElementById('chat-container');
@@ -149,7 +150,7 @@ class PageAssistant {
                     // A tab was activated, check if we need to show/hide the return button
                     console.log('Tab activated, updating return button visibility');
                     this.updateButtonVisibility();
-                    
+
                     // If we have tab data, update the refresh button favicon
                     if (message.data && message.data.tab) {
                         this.updateRefreshButtonFavicon(message.data.tab);
@@ -309,23 +310,23 @@ class PageAssistant {
                     if (isDifferentTab) {
                         // If we're on a different tab than the reference tab
                         // Always show both buttons regardless of whether we're using original tab or not
-                        this.elements.returnButton.style.display = 'block';
-                        this.elements.refreshButton.style.display = 'block';
-                        
+                        this.elements.returnButton.classList.add('visible');
+                        this.elements.refreshButton.classList.add('visible');
+
                         // Update the refresh button favicon with the current tab's favicon
                         this.updateRefreshButtonFavicon(currentTab);
                     } else {
                         // We're on the same tab as the reference tab
                         // Hide both buttons
-                        this.elements.returnButton.style.display = 'none';
-                        this.elements.refreshButton.style.display = 'none';
+                        this.elements.returnButton.classList.remove('visible');
+                        this.elements.refreshButton.classList.remove('visible');
                     }
                 }
             });
         } else {
             // No original tab, hide the buttons
-            this.elements.returnButton.style.display = 'none';
-            this.elements.refreshButton.style.display = 'none';
+            this.elements.returnButton.classList.remove('visible');
+            this.elements.refreshButton.classList.remove('visible');
         }
     }
 
@@ -337,7 +338,7 @@ class PageAssistant {
                     // Extract domain from URL
                     const url = new URL(tab.url);
                     const domain = url.hostname;
-                    
+
                     // Get favicon URL using Google's favicon service
                     const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
                     refreshFaviconImg.src = faviconUrl;

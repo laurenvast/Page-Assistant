@@ -421,26 +421,31 @@ button:disabled {
 /* Tab header styles */
 .tab-header {
   display: flex;
-  justify-content: space-between;
+  /* justify-content: space-between; */
   align-items: center;
-  background: white;
+  width: calc(100% - var(--spacing-sm) * 4);
   z-index: 10;
-  gap: var(--spacing-sm);
-  border-radius: var(--border-radius-large);
   margin: var(--spacing-md);
-  padding: var(--spacing-sm) var(--spacing-md);
   position: absolute;
   top: 0;
-  border-radius: 100px;
-  width: calc(100% - var(--spacing-md) * 4);
-  box-shadow: 0 .25em 2em 0 rgba(0, 0, 0, 0.15);
-
-
+  gap: var(--spacing-md);
+  max-width: 100%;
 }
 
-.tab-header .buttons-container {
+.tab-header .tab-container {
   display: flex;
-  gap: var(--spacing-xs);
+  align-items: center;
+  background: white;
+  gap: var(--spacing-sm);
+  border-radius: 999px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  box-shadow: 0 .25em 2em 0 rgba(0, 0, 0, 0.15);
+  flex: 1;
+  min-width: 0;
+  /* Important for flexbox to allow shrinking below content size */
+  overflow: hidden;
+  transition: width 2s ease;
+
 }
 
 .tab-favicon {
@@ -461,7 +466,9 @@ button:disabled {
   font-size: 0.9em;
   display: flex;
   flex-direction: column;
-  flex-grow: 2;
+  width: 100%;
+  min-width: 0;
+  /* Important for flexbox text overflow */
 }
 
 .tab-title-text {
@@ -495,14 +502,16 @@ button:disabled {
   margin-left: var(--spacing-xs);
   flex-shrink: 0;
   background: var(--gradient-secondary);
+  display: none;
+  /* Hidden by default */
 }
 
 .refresh-button {
   color: white;
   border: none;
   border-radius: 50%;
-  width: 2.5em;
-  height: 2.5em;
+  width: 3em;
+  height: 3em;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
@@ -512,8 +521,10 @@ button:disabled {
   flex-shrink: 0;
   padding: 0;
   background: var(--gradient-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 .25em 2em 0 rgba(0, 0, 0, 0.15);
   overflow: visible;
+  display: none;
+  /* Hidden by default */
 }
 
 .refresh-button svg {
@@ -527,16 +538,15 @@ button:disabled {
 
 .refresh-favicon {
   position: absolute;
-  width: 1em;
-  height: 1em;
-  bottom: -0.25em;
-  right: -0.25em;
+  width: 1rem;
+  height: 1rem;
+  bottom: -.3rem;
+  right: -.3rem;
   z-index: 2;
   background: white;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0px 0 2px white;
   overflow: hidden;
-  border: 1px solid white;
 }
 
 .refresh-favicon img {
@@ -565,6 +575,12 @@ button:disabled {
 .refresh-button:active {
   transform: translateY(1px);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Visibility classes */
+.return-button.visible,
+.refresh-button.visible {
+  display: flex;
 }
 
 /* Loading container specific styles */

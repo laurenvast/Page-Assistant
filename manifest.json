@@ -36,5 +36,6 @@
   },
   "action": {
     "default_title": "Open Page Assistant"
-  }
+  },
+  "options_page": "options.html"
 }

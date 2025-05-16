@@ -1,6 +1,22 @@
 import { getMockResponse } from './mock-api.js';
 import { CONFIG } from './constants.js';
-const IS_DEVELOPMENT = true; // Toggle this for development/production
+
+// Development mode will be controlled via options page
+let IS_DEVELOPMENT = false;
+
+// Load development mode setting from storage
+chrome.storage.local.get({ devMode: false }, function(data) {
+  IS_DEVELOPMENT = data.devMode;
+  console.log('Development mode loaded from storage:', IS_DEVELOPMENT);
+});
+
+// Listen for changes to the development mode setting
+chrome.storage.onChanged.addListener(function(changes, namespace) {
+  if (namespace === 'local' && changes.devMode) {
+    IS_DEVELOPMENT = changes.devMode.newValue;
+    console.log('Development mode updated:', IS_DEVELOPMENT);
+  }
+});
 
 const API_CONFIG = {
   ENDPOINT: 'https://openai-server-lauren.vercel.app/api/chat'
