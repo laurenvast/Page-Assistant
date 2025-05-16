@@ -204,7 +204,7 @@ class PageAssistant {
                         console.log('Got navigation response:', response);
                         if (response && response.success) {
                             console.log('Navigation successful, hiding buttons');
-                            
+
                             // Hide both buttons using the class method (not style.display)
                             this.elements.returnButton.classList.remove('visible');
                             this.elements.refreshButton.classList.remove('visible');
@@ -214,7 +214,7 @@ class PageAssistant {
                                 console.log('Updating original tab ID to new tab:', response.tabId);
                                 this.originalTab.id = response.tabId;
                             }
-                            
+
                             // Force a check of button visibility after a short delay
                             // This ensures buttons will show up again if user navigates away
                             setTimeout(() => {
@@ -315,31 +315,47 @@ class PageAssistant {
                     const currentTab = tabs[0];
                     // Store the current tab info
                     this.currentTab = currentTab;
-                    
+
                     // Check if we're on a different tab than the original tab
                     const isDifferentTab = currentTab.id !== this.originalTab.id;
                     console.log('Current tab:', currentTab.id, 'Original tab:', this.originalTab.id, 'Different:', isDifferentTab);
+
+                    // Get the header element
+                    const headerElement = document.getElementById('tab-header');
 
                     if (isDifferentTab) {
                         // We're on a different tab than the original tab
                         // Show both buttons - ensure they're visible by using both classList and style
                         this.elements.returnButton.classList.add('visible');
                         this.elements.refreshButton.classList.add('visible');
-                        
+
                         // Also ensure display property is set correctly (in case it was set to 'none')
                         this.elements.returnButton.style.display = '';
                         this.elements.refreshButton.style.display = '';
-                        
+
                         // Update the refresh button favicon with the current tab's favicon
                         this.updateRefreshButtonFavicon(currentTab);
-                        
+
+                        // Make the header always visible when on a different tab
+                        if (headerElement) {
+                            headerElement.classList.remove('hidden');
+                            // Add a class to indicate we're on a different tab
+                            headerElement.classList.add('different-tab');
+                        }
+
                         console.log('Showing both buttons - different tab detected');
                     } else {
                         // We're on the same tab as the original tab
                         // Hide both buttons
                         this.elements.returnButton.classList.remove('visible');
                         this.elements.refreshButton.classList.remove('visible');
-                        
+
+                        // Remove the different-tab class when on the original tab
+                        if (headerElement) {
+                            headerElement.classList.remove('different-tab');
+                            // Note: We don't add the 'hidden' class here - that's controlled by scroll position
+                        }
+
                         console.log('Hiding buttons - on original tab');
                     }
                 }
@@ -802,8 +818,8 @@ class PageAssistant {
             await this.processQuestion('', true);
 
             // Add a message indicating we've switched to the current tab
-            this.addMessage('Now using content from the current tab.', 'system-message');
-            
+            // this.addMessage('Now using content from the current tab.', 'system-message');
+
             // Force a check of button visibility after a short delay
             // This ensures buttons will show up again if user navigates away
             setTimeout(() => {
@@ -831,10 +847,47 @@ class PageAssistant {
 
             // Set up periodic tab info updates
             setInterval(() => this.updateTabInfo(), 5000);
+
+            // Set up scroll event listener to hide/show header
+            this.setupScrollListener();
         } catch (error) {
             console.error('Initialization failed:', error);
             this.addMessage(this.config.UI_TEXT.ERRORS.INIT_FAILED, 'error');
             this.setLoading(false);
+        }
+    }
+
+    setupScrollListener() {
+        let lastScrollTop = 0;
+        const headerElement = document.getElementById('tab-header');
+        const scrollThreshold = 20; // Minimum scroll amount to trigger header hide/show
+
+        if (!headerElement) return;
+
+        // Add scroll event listener to the messages container
+        const messagesContainer = document.getElementById('messages');
+        if (messagesContainer) {
+            messagesContainer.addEventListener('scroll', () => {
+                const scrollTop = messagesContainer.scrollTop;
+
+                // Only hide header based on scroll if we're on the original tab
+                // If the header has the 'different-tab' class, we always want it visible
+                if (!headerElement.classList.contains('different-tab')) {
+                    // Determine scroll direction and distance
+                    if (scrollTop > lastScrollTop && scrollTop > scrollThreshold) {
+                        // Scrolling down - hide header
+                        headerElement.classList.add('hidden');
+                    } else if (scrollTop < lastScrollTop || scrollTop < scrollThreshold) {
+                        // Scrolling up or near top - show header
+                        headerElement.classList.remove('hidden');
+                    }
+                } else {
+                    // Always show header when on a different tab
+                    headerElement.classList.remove('hidden');
+                }
+
+                lastScrollTop = scrollTop;
+            });
         }
     }
 }
