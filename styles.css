@@ -39,6 +39,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
 }
 
 #input-container {
@@ -380,6 +381,71 @@ button:disabled {
     --y: 50%;
     opacity: 0.8;
   }
+}
+
+/* Tab header styles */
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-primary-light);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab-title {
+  font-weight: 500;
+  color: var(--color-primary-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+  font-size: 0.9em;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-title-text {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.tab-domain {
+  font-size: 0.8em;
+  color: #666;
+  font-weight: 400;
+}
+
+.return-button {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-xs) var(--spacing-md);
+  cursor: pointer;
+  font-size: 0.85em;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 20; /* Ensure it's above other elements */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.return-button:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.return-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* Loading container specific styles */

@@ -7,6 +7,8 @@ class PageAssistant {
         this.pageContent = null;
         this.systemPrompt = null;
         this.isInitialLoad = true;
+        this.originalTab = null;
+        this.originalTabInfoSet = false; // Flag to track if we've already set the original tab info
 
         // Cache DOM elements
         this.elements = {
@@ -22,10 +24,208 @@ class PageAssistant {
         // Bind methods
         this.handleQuestion = this.handleQuestion.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.navigateToOriginalTab = this.navigateToOriginalTab.bind(this);
 
         this.loadingTimeout = null;
         this.isLoading = false;  // Add this to track loading state
 
+        // Create header elements for tab info and navigation
+        this.createHeaderElements();
+    }
+
+    createHeaderElements() {
+        // Create header container
+        const headerContainer = document.createElement('div');
+        headerContainer.id = 'tab-header';
+        headerContainer.className = 'tab-header';
+        
+        // Create tab title element
+        this.elements.tabTitle = document.createElement('div');
+        this.elements.tabTitle.id = 'tab-title';
+        this.elements.tabTitle.className = 'tab-title';
+        this.elements.tabTitle.textContent = 'Loading...';
+        
+        // Create return button (hidden by default)
+        this.elements.returnButton = document.createElement('button');
+        this.elements.returnButton.id = 'return-button';
+        this.elements.returnButton.className = 'return-button';
+        this.elements.returnButton.textContent = 'Return to Tab';
+        this.elements.returnButton.style.display = 'none';
+        this.elements.returnButton.addEventListener('click', this.navigateToOriginalTab);
+        
+        // Add elements to header
+        headerContainer.appendChild(this.elements.tabTitle);
+        headerContainer.appendChild(this.elements.returnButton);
+        
+        // Insert header at the top of chat container
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.insertBefore(headerContainer, chatContainer.firstChild);
+        
+        // Set up visibility change listener to show/hide return button
+        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    }
+    
+    handleVisibilityChange() {
+        if (document.visibilityState === 'visible' && this.originalTab) {
+            // Update the return button visibility when tab visibility changes
+            this.updateReturnButtonVisibility();
+        }
+    }
+    
+    navigateToOriginalTab() {
+        console.log('Attempting to navigate to original tab:', this.originalTab);
+        if (this.originalTab && this.originalTab.id) {
+            const tabId = this.originalTab.id;
+            console.log('Sending NAVIGATE_TO_ORIGINAL_TAB message for tab ID:', tabId);
+            try {
+                chrome.runtime.sendMessage(
+                    { 
+                        type: 'NAVIGATE_TO_ORIGINAL_TAB', 
+                        tabId: tabId // Directly pass the tab ID
+                    },
+                    (response) => {
+                        console.log('Got navigation response:', response);
+                        if (response && response.success) {
+                            console.log('Navigation successful, hiding return button');
+                            this.elements.returnButton.style.display = 'none';
+                        } else {
+                            console.error('Navigation failed:', response?.error || 'Unknown error');
+                            // Show an error message to the user
+                            alert('Could not return to original tab: ' + (response?.error || 'Unknown error'));
+                        }
+                    }
+                );
+            } catch (error) {
+                console.error('Error sending navigation message:', error);
+            }
+        } else {
+            console.error('Cannot navigate: No valid original tab information');
+            alert('Cannot return to original tab: Tab information not available');
+        }
+    }
+    
+    updateTabInfo() {
+        // Only update tab info if it hasn't been set yet or we're in the initial load
+        if (!this.originalTabInfoSet) {
+            console.log('Requesting original tab info...');
+            chrome.runtime.sendMessage({ type: 'GET_ORIGINAL_TAB' }, (response) => {
+                console.log('Got tab info response:', response);
+                if (response && response.tab) {
+                    this.originalTab = response.tab;
+                    this.originalTabInfoSet = true; // Mark that we've set the original tab info
+                    console.log('Original tab title:', response.tab.title);
+                    
+                    // Extract domain from URL
+                    let domain = '';
+                    if (response.tab.url) {
+                        try {
+                            const url = new URL(response.tab.url);
+                            domain = url.hostname;
+                        } catch (e) {
+                            console.error('Error parsing URL:', e);
+                        }
+                    }
+                    
+                    // Update tab title with title and domain
+                    if (domain) {
+                        // Clear the tab title element first
+                        this.elements.tabTitle.innerHTML = '';
+                        
+                        // Create title span
+                        const titleSpan = document.createElement('span');
+                        titleSpan.className = 'tab-title-text';
+                        titleSpan.textContent = response.tab.title || 'Unknown Tab';
+                        this.elements.tabTitle.appendChild(titleSpan);
+                        
+                        // Create domain span
+                        const domainSpan = document.createElement('span');
+                        domainSpan.className = 'tab-domain';
+                        domainSpan.textContent = domain;
+                        this.elements.tabTitle.appendChild(domainSpan);
+                    } else {
+                        // Fallback if no domain is available
+                        this.elements.tabTitle.textContent = response.tab.title || 'Unknown Tab';
+                    }
+                    
+                    // Update document title with tab name and domain
+                    document.title = domain ? 
+                        `${response.tab.title || 'Unknown Tab'} - ${domain}` : 
+                        `Page Assistant - ${response.tab.title || 'Unknown Tab'}`;
+                } else {
+                    console.error('No valid tab information received');
+                    // Try to get current active tab as fallback
+                    this.getActiveTabInfo();
+                }
+            });
+        } else {
+            console.log('Using existing original tab info:', this.originalTab?.title);
+            // Just check if we need to show the return button
+            this.updateReturnButtonVisibility();
+        }
+    }
+    
+    updateReturnButtonVisibility() {
+        if (this.originalTab) {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs.length > 0 && tabs[0].id !== this.originalTab.id) {
+                    this.elements.returnButton.style.display = 'block';
+                } else {
+                    this.elements.returnButton.style.display = 'none';
+                }
+            });
+        }
+    }
+    
+    getActiveTabInfo() {
+        // Only get active tab info if we haven't set the original tab info yet
+        if (!this.originalTabInfoSet) {
+            console.log('Trying to get active tab as fallback...');
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                console.log('Active tabs:', tabs);
+                if (tabs && tabs.length > 0) {
+                    const activeTab = tabs[0];
+                    this.originalTab = activeTab;
+                    this.originalTabInfoSet = true; // Mark that we've set the original tab info
+                    
+                    // Extract domain from URL
+                    let domain = '';
+                    if (activeTab.url) {
+                        try {
+                            const url = new URL(activeTab.url);
+                            domain = url.hostname;
+                        } catch (e) {
+                            console.error('Error parsing URL:', e);
+                        }
+                    }
+                    
+                    // Update tab title with title and domain
+                    if (domain) {
+                        // Clear the tab title element first
+                        this.elements.tabTitle.innerHTML = '';
+                        
+                        // Create title span
+                        const titleSpan = document.createElement('span');
+                        titleSpan.className = 'tab-title-text';
+                        titleSpan.textContent = activeTab.title || 'Current Tab';
+                        this.elements.tabTitle.appendChild(titleSpan);
+                        
+                        // Create domain span
+                        const domainSpan = document.createElement('span');
+                        domainSpan.className = 'tab-domain';
+                        domainSpan.textContent = domain;
+                        this.elements.tabTitle.appendChild(domainSpan);
+                    } else {
+                        // Fallback if no domain is available
+                        this.elements.tabTitle.textContent = activeTab.title || 'Current Tab';
+                    }
+                    
+                    // Update document title with tab name and domain
+                    document.title = domain ? 
+                        `${activeTab.title || 'Current Tab'} - ${domain}` : 
+                        `Page Assistant - ${activeTab.title || 'Current Tab'}`;
+                }
+            });
+        }
     }
 
     smoothScrollToBottom() {
@@ -316,11 +516,18 @@ class PageAssistant {
     async initialize() {
         try {
             this.setLoading(true);
+            
+            // Get tab information
+            this.updateTabInfo();
+            
             await this.processQuestion('', true);
             this.setLoading(false);
 
             this.elements.askButton.addEventListener('click', this.handleQuestion);
             this.elements.input.addEventListener('keypress', this.handleKeyPress);
+            
+            // Set up periodic tab info updates
+            setInterval(() => this.updateTabInfo(), 5000);
         } catch (error) {
             console.error('Initialization failed:', error);
             this.addMessage(this.config.UI_TEXT.ERRORS.INIT_FAILED, 'error');

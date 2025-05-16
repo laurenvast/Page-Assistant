@@ -1,9 +1,49 @@
 import { getMockResponse } from './mock-api.js';
 import { CONFIG } from './constants.js';
-const IS_DEVELOPMENT = false; // Toggle this for development/production
+const IS_DEVELOPMENT = true; // Toggle this for development/production
 
 const API_CONFIG = {
   ENDPOINT: 'https://openai-server-lauren.vercel.app/api/chat'
+};
+
+// Track the original tab that opened the sidepanel
+// This is the tab that the chat content is about and should not change when navigating
+let originalTab = null;
+
+// Function to save the original tab to storage
+const saveOriginalTab = async (tab) => {
+  try {
+    await chrome.storage.local.set({ originalTab: tab });
+    console.log('Original tab saved to storage:', tab);
+  } catch (error) {
+    console.error('Error saving original tab to storage:', error);
+  }
+};
+
+// Function to load the original tab from storage
+const loadOriginalTab = async () => {
+  try {
+    const data = await chrome.storage.local.get(['originalTab']);
+    if (data.originalTab) {
+      originalTab = data.originalTab;
+      console.log('Original tab loaded from storage:', originalTab);
+    }
+  } catch (error) {
+    console.error('Error loading original tab from storage:', error);
+  }
+};
+
+// Load the original tab from storage when the background script starts
+loadOriginalTab();
+
+// Function to get full tab information
+const getFullTabInfo = async (tabId) => {
+  try {
+    return await chrome.tabs.get(tabId);
+  } catch (error) {
+    console.error('Error getting tab info:', error);
+    return null;
+  }
 };
 
 // Handle messages from sidepanel
@@ -16,6 +56,92 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'MAKE_API_REQUEST') {
     handleApiRequest(request.data).then(sendResponse);
     return true;
+  }
+
+  if (request.type === 'GET_ORIGINAL_TAB') {
+    console.log('GET_ORIGINAL_TAB request received, current originalTab:', originalTab);
+    
+    // If originalTab is null, try to load it from storage first
+    if (!originalTab) {
+      // We need to load from storage and then respond
+      chrome.storage.local.get(['originalTab'], (data) => {
+        if (data.originalTab) {
+          originalTab = data.originalTab;
+          console.log('Loaded originalTab from storage:', originalTab);
+          
+          // Now check if we have a valid tab and get the latest info
+          if (originalTab && originalTab.id) {
+            getFullTabInfo(originalTab.id).then(tabInfo => {
+              console.log('Sending updated tab info:', tabInfo);
+              if (tabInfo) {
+                originalTab = tabInfo; // Update our stored tab with latest info
+                saveOriginalTab(originalTab); // Save the updated tab info
+              }
+              sendResponse({ tab: originalTab });
+            }).catch(error => {
+              console.error('Error getting tab info:', error);
+              sendResponse({ tab: originalTab });
+            });
+          } else {
+            sendResponse({ tab: originalTab });
+          }
+        } else {
+          console.log('No originalTab found in storage');
+          sendResponse({ tab: null });
+        }
+      });
+      return true; // Keep the message channel open for async response
+    }
+    
+    // If we have an originalTab with an ID, get the latest info
+    if (originalTab && originalTab.id) {
+      getFullTabInfo(originalTab.id).then(tabInfo => {
+        console.log('Sending updated tab info:', tabInfo);
+        if (tabInfo) {
+          originalTab = tabInfo; // Update our stored tab with latest info
+          saveOriginalTab(originalTab); // Save the updated tab info
+        }
+        sendResponse({ tab: originalTab });
+      }).catch(error => {
+        console.error('Error getting tab info:', error);
+        sendResponse({ tab: originalTab });
+      });
+      return true; // Keep the message channel open for async response
+    } else {
+      // If we don't have an originalTab, just send what we have
+      sendResponse({ tab: originalTab });
+      return false;
+    }
+  }
+
+  if (request.type === 'NAVIGATE_TO_ORIGINAL_TAB') {
+    // Get the tab ID directly from the request
+    const tabId = request.tabId;
+    console.log('NAVIGATE_TO_ORIGINAL_TAB request received with tabId:', tabId);
+    
+    if (tabId) {
+      try {
+        // Use the tab ID passed from the sidepanel
+        chrome.tabs.update(tabId, { active: true }, (updatedTab) => {
+          if (chrome.runtime.lastError) {
+            console.error('Chrome runtime error:', chrome.runtime.lastError);
+            sendResponse({ success: false, error: chrome.runtime.lastError.message });
+          } else {
+            console.log('Tab activated with ID:', tabId);
+            sendResponse({ success: true });
+          }
+        });
+        return true; // Keep the message channel open for async response
+      } catch (error) {
+        console.error('Error navigating to tab:', error);
+        sendResponse({ success: false, error: error.message });
+        return false;
+      }
+    } else {
+      console.error('No tab ID provided in the request');
+      sendResponse({ success: false, error: 'No tab ID provided' });
+      return false;
+    }
   }
 });
 
@@ -81,6 +207,26 @@ async function handleApiRequest({ content, messages }) {
 // Set up side panel behavior
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-chrome.action.onClicked.addListener((tab) => {
+chrome.action.onClicked.addListener(async (tab) => {
+  console.log('Action clicked, tab:', tab);
+  // Store the original tab when the sidepanel is opened
+  // Get full tab information to ensure we have complete details
+  const fullTabInfo = await getFullTabInfo(tab.id);
+  originalTab = fullTabInfo || tab;
+  
+  // Save the original tab to storage for persistence
+  await saveOriginalTab(originalTab);
+  
+  console.log('Stored original tab:', originalTab);
   chrome.sidePanel.open({ windowId: tab.windowId });
+});
+
+// Listen for tab updates to keep originalTab information current
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (originalTab && tabId === originalTab.id) {
+    console.log('Original tab updated:', changeInfo);
+    // Only update the properties that have changed, preserving other properties
+    originalTab = { ...originalTab, ...tab };
+    console.log('Updated originalTab:', originalTab);
+  }
 });
