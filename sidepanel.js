@@ -42,6 +42,17 @@ class PageAssistant {
         headerContainer.id = 'tab-header';
         headerContainer.className = 'tab-header';
 
+        // Create favicon element
+        this.elements.tabFavicon = document.createElement('div');
+        this.elements.tabFavicon.id = 'tab-favicon';
+        this.elements.tabFavicon.className = 'tab-favicon';
+
+        // Create favicon image element
+        const faviconImg = document.createElement('img');
+        faviconImg.alt = '';
+        // We'll set the actual favicon URL when we get tab info
+        this.elements.tabFavicon.appendChild(faviconImg);
+
         // Create tab title element
         this.elements.tabTitle = document.createElement('div');
         this.elements.tabTitle.id = 'tab-title';
@@ -60,9 +71,30 @@ class PageAssistant {
         this.elements.refreshButton = document.createElement('button');
         this.elements.refreshButton.id = 'refresh-button';
         this.elements.refreshButton.className = 'refresh-button';
-        this.elements.refreshButton.textContent = 'Use Current Tab';
+        this.elements.refreshButton.title = 'Use Current Tab';
         this.elements.refreshButton.style.display = 'none';
         this.elements.refreshButton.addEventListener('click', this.refreshWithCurrentTab);
+
+        // Create SVG icon for refresh button
+        const refreshSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        refreshSvg.setAttribute('width', '18');
+        refreshSvg.setAttribute('height', '18');
+        refreshSvg.setAttribute('viewBox', '0 0 24 24');
+        refreshSvg.setAttribute('fill', 'none');
+        refreshSvg.setAttribute('stroke', 'currentColor');
+        refreshSvg.setAttribute('stroke-width', '3');
+        refreshSvg.setAttribute('stroke-linecap', 'round');
+        refreshSvg.setAttribute('stroke-linejoin', 'round');
+
+        // Create the path for the refresh icon
+        const refreshPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        refreshPath.setAttribute('d', 'M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16');
+
+        // Add the path to the SVG
+        refreshSvg.appendChild(refreshPath);
+
+        // Add the SVG to the button
+        this.elements.refreshButton.appendChild(refreshSvg);
 
         // Create a container for the buttons
         const buttonsContainer = document.createElement('div');
@@ -73,6 +105,7 @@ class PageAssistant {
         buttonsContainer.appendChild(this.elements.refreshButton);
 
         // Add elements to header
+        headerContainer.appendChild(this.elements.tabFavicon);
         headerContainer.appendChild(this.elements.tabTitle);
         headerContainer.appendChild(buttonsContainer);
 
@@ -216,6 +249,16 @@ class PageAssistant {
                         domainSpan.className = 'tab-domain';
                         domainSpan.textContent = domain;
                         this.elements.tabTitle.appendChild(domainSpan);
+
+                        // Update favicon
+                        if (this.elements.tabFavicon) {
+                            const faviconImg = this.elements.tabFavicon.querySelector('img');
+                            if (faviconImg) {
+                                // Get favicon URL using Google's favicon service
+                                const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                                faviconImg.src = faviconUrl;
+                            }
+                        }
                     } else {
                         // Fallback if no domain is available
                         this.elements.tabTitle.textContent = response.tab.title || 'Unknown Tab';
@@ -306,6 +349,16 @@ class PageAssistant {
                         domainSpan.className = 'tab-domain';
                         domainSpan.textContent = domain;
                         this.elements.tabTitle.appendChild(domainSpan);
+
+                        // Update favicon
+                        if (this.elements.tabFavicon) {
+                            const faviconImg = this.elements.tabFavicon.querySelector('img');
+                            if (faviconImg) {
+                                // Get favicon URL using Google's favicon service
+                                const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                                faviconImg.src = faviconUrl;
+                            }
+                        }
                     } else {
                         // Fallback if no domain is available
                         this.elements.tabTitle.textContent = activeTab.title || 'Current Tab';
@@ -646,24 +699,34 @@ class PageAssistant {
                         console.error('Error parsing URL:', e);
                     }
                 }
-                
+
                 // Clear the tab title element first
                 this.elements.tabTitle.innerHTML = '';
-                
+
                 // Create title span
                 const titleSpan = document.createElement('span');
                 titleSpan.className = 'tab-title-text';
                 titleSpan.textContent = this.currentTab.title || 'Unknown Page';
                 this.elements.tabTitle.appendChild(titleSpan);
-                
+
                 // Create domain span
                 if (domain) {
                     const domainSpan = document.createElement('span');
                     domainSpan.className = 'tab-domain';
                     domainSpan.textContent = domain;
                     this.elements.tabTitle.appendChild(domainSpan);
+
+                    // Update favicon
+                    if (this.elements.tabFavicon) {
+                        const faviconImg = this.elements.tabFavicon.querySelector('img');
+                        if (faviconImg) {
+                            // Get favicon URL using Google's favicon service
+                            const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                            faviconImg.src = faviconUrl;
+                        }
+                    }
                 }
-                
+
                 // Store the current tab as the new reference tab
                 // This will be used to detect if the user navigates away again
                 this.originalTab = { ...this.currentTab };
