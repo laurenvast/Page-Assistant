@@ -484,6 +484,7 @@ button:disabled {
   padding: 0;
   background: var(--gradient-primary);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: visible;
 }
 
 .refresh-button svg {
@@ -492,6 +493,27 @@ button:disabled {
   left: 50%;
   transform: translate(-50%, -50%);
   display: block;
+  z-index: 1;
+}
+
+.refresh-favicon {
+  position: absolute;
+  width: 1em;
+  height: 1em;
+  bottom: -0.25em;
+  right: -0.25em;
+  z-index: 2;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  border: 1px solid white;
+}
+
+.refresh-favicon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .return-button {
