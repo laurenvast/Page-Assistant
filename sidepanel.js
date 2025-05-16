@@ -38,13 +38,13 @@ class PageAssistant {
         const headerContainer = document.createElement('div');
         headerContainer.id = 'tab-header';
         headerContainer.className = 'tab-header';
-        
+
         // Create tab title element
         this.elements.tabTitle = document.createElement('div');
         this.elements.tabTitle.id = 'tab-title';
         this.elements.tabTitle.className = 'tab-title';
         this.elements.tabTitle.textContent = 'Loading...';
-        
+
         // Create return button (hidden by default)
         this.elements.returnButton = document.createElement('button');
         this.elements.returnButton.id = 'return-button';
@@ -52,46 +52,100 @@ class PageAssistant {
         this.elements.returnButton.textContent = 'Return to Tab';
         this.elements.returnButton.style.display = 'none';
         this.elements.returnButton.addEventListener('click', this.navigateToOriginalTab);
-        
+
         // Add elements to header
         headerContainer.appendChild(this.elements.tabTitle);
         headerContainer.appendChild(this.elements.returnButton);
-        
+
         // Insert header at the top of chat container
         const chatContainer = document.getElementById('chat-container');
         chatContainer.insertBefore(headerContainer, chatContainer.firstChild);
-        
+
         // Set up visibility change listener to show/hide return button
         document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+
+        // Add focus event listener to update status when sidepanel gains focus
+        window.addEventListener('focus', () => {
+            console.log('Sidepanel gained focus, updating tab status');
+            this.checkTabStatus();
+            this.updateReturnButtonVisibility();
+        });
+
+        // Set up listener for tab status change messages from background script
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.type === 'TAB_STATUS_CHANGED') {
+                console.log('Received tab status change:', message.changeType, message.data);
+
+                // Handle different types of tab changes
+                if (message.changeType === 'tab-removed' &&
+                    this.originalTab &&
+                    message.data.tabId === this.originalTab.id) {
+                    // Original tab was closed, update button text
+                    console.log('Original tab was closed, updating button text');
+                    this.elements.returnButton.textContent = 'Reopen Page';
+                } else if (message.changeType === 'tab-activated') {
+                    // A tab was activated, check if we need to show/hide the return button
+                    console.log('Tab activated, updating return button visibility');
+                    this.updateReturnButtonVisibility();
+                }
+
+                // Send a response to acknowledge receipt
+                sendResponse({ received: true });
+            }
+        });
     }
-    
+
+    checkTabStatus() {
+        if (this.originalTab && this.originalTab.id) {
+            chrome.tabs.get(this.originalTab.id, (tab) => {
+                if (chrome.runtime.lastError) {
+                    // Tab no longer exists, update button text
+                    this.elements.returnButton.textContent = 'Reopen Page';
+                } else {
+                    // Tab still exists, keep original text
+                    this.elements.returnButton.textContent = 'Return to Tab';
+                }
+            });
+        }
+    }
+
     handleVisibilityChange() {
         if (document.visibilityState === 'visible' && this.originalTab) {
-            // Update the return button visibility when tab visibility changes
+            // Immediately check tab status and update UI when visibility changes
+            this.checkTabStatus();
             this.updateReturnButtonVisibility();
         }
     }
-    
+
     navigateToOriginalTab() {
         console.log('Attempting to navigate to original tab:', this.originalTab);
-        if (this.originalTab && this.originalTab.id) {
+        if (this.originalTab) {
             const tabId = this.originalTab.id;
-            console.log('Sending NAVIGATE_TO_ORIGINAL_TAB message for tab ID:', tabId);
+            const url = this.originalTab.url;
+
+            console.log('Sending NAVIGATE_TO_ORIGINAL_TAB message for tab ID:', tabId, 'and URL:', url);
             try {
                 chrome.runtime.sendMessage(
-                    { 
-                        type: 'NAVIGATE_TO_ORIGINAL_TAB', 
-                        tabId: tabId // Directly pass the tab ID
+                    {
+                        type: 'NAVIGATE_TO_ORIGINAL_TAB',
+                        tabId: tabId, // Pass the tab ID
+                        url: url      // Also pass the URL for reopening if needed
                     },
                     (response) => {
                         console.log('Got navigation response:', response);
                         if (response && response.success) {
                             console.log('Navigation successful, hiding return button');
                             this.elements.returnButton.style.display = 'none';
+
+                            // If a new tab was created, update our original tab info
+                            if (response.newTab && response.tabId) {
+                                console.log('Updating original tab ID to new tab:', response.tabId);
+                                this.originalTab.id = response.tabId;
+                            }
                         } else {
                             console.error('Navigation failed:', response?.error || 'Unknown error');
                             // Show an error message to the user
-                            alert('Could not return to original tab: ' + (response?.error || 'Unknown error'));
+                            alert('Could not navigate to page: ' + (response?.error || 'Unknown error'));
                         }
                     }
                 );
@@ -100,10 +154,10 @@ class PageAssistant {
             }
         } else {
             console.error('Cannot navigate: No valid original tab information');
-            alert('Cannot return to original tab: Tab information not available');
+            alert('Cannot navigate to page: Tab information not available');
         }
     }
-    
+
     updateTabInfo() {
         // Only update tab info if it hasn't been set yet or we're in the initial load
         if (!this.originalTabInfoSet) {
@@ -114,7 +168,7 @@ class PageAssistant {
                     this.originalTab = response.tab;
                     this.originalTabInfoSet = true; // Mark that we've set the original tab info
                     console.log('Original tab title:', response.tab.title);
-                    
+
                     // Extract domain from URL
                     let domain = '';
                     if (response.tab.url) {
@@ -125,18 +179,18 @@ class PageAssistant {
                             console.error('Error parsing URL:', e);
                         }
                     }
-                    
+
                     // Update tab title with title and domain
                     if (domain) {
                         // Clear the tab title element first
                         this.elements.tabTitle.innerHTML = '';
-                        
+
                         // Create title span
                         const titleSpan = document.createElement('span');
                         titleSpan.className = 'tab-title-text';
                         titleSpan.textContent = response.tab.title || 'Unknown Tab';
                         this.elements.tabTitle.appendChild(titleSpan);
-                        
+
                         // Create domain span
                         const domainSpan = document.createElement('span');
                         domainSpan.className = 'tab-domain';
@@ -146,10 +200,10 @@ class PageAssistant {
                         // Fallback if no domain is available
                         this.elements.tabTitle.textContent = response.tab.title || 'Unknown Tab';
                     }
-                    
+
                     // Update document title with tab name and domain
-                    document.title = domain ? 
-                        `${response.tab.title || 'Unknown Tab'} - ${domain}` : 
+                    document.title = domain ?
+                        `${response.tab.title || 'Unknown Tab'} - ${domain}` :
                         `Page Assistant - ${response.tab.title || 'Unknown Tab'}`;
                 } else {
                     console.error('No valid tab information received');
@@ -163,19 +217,29 @@ class PageAssistant {
             this.updateReturnButtonVisibility();
         }
     }
-    
+
     updateReturnButtonVisibility() {
         if (this.originalTab) {
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs.length > 0 && tabs[0].id !== this.originalTab.id) {
-                    this.elements.returnButton.style.display = 'block';
-                } else {
-                    this.elements.returnButton.style.display = 'none';
-                }
+            // First check if the original tab still exists
+            chrome.tabs.get(this.originalTab.id, (tab) => {
+                const tabExists = !chrome.runtime.lastError;
+
+                // Then check if we're currently on a different tab
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    const onDifferentTab = tabs.length > 0 && (!tabExists || tabs[0].id !== this.originalTab.id);
+
+                    if (onDifferentTab) {
+                        // Show the button if we're on a different tab or the original tab no longer exists
+                        this.elements.returnButton.style.display = 'block';
+                    } else {
+                        // Hide the button if we're on the original tab
+                        this.elements.returnButton.style.display = 'none';
+                    }
+                });
             });
         }
     }
-    
+
     getActiveTabInfo() {
         // Only get active tab info if we haven't set the original tab info yet
         if (!this.originalTabInfoSet) {
@@ -186,7 +250,7 @@ class PageAssistant {
                     const activeTab = tabs[0];
                     this.originalTab = activeTab;
                     this.originalTabInfoSet = true; // Mark that we've set the original tab info
-                    
+
                     // Extract domain from URL
                     let domain = '';
                     if (activeTab.url) {
@@ -197,18 +261,18 @@ class PageAssistant {
                             console.error('Error parsing URL:', e);
                         }
                     }
-                    
+
                     // Update tab title with title and domain
                     if (domain) {
                         // Clear the tab title element first
                         this.elements.tabTitle.innerHTML = '';
-                        
+
                         // Create title span
                         const titleSpan = document.createElement('span');
                         titleSpan.className = 'tab-title-text';
                         titleSpan.textContent = activeTab.title || 'Current Tab';
                         this.elements.tabTitle.appendChild(titleSpan);
-                        
+
                         // Create domain span
                         const domainSpan = document.createElement('span');
                         domainSpan.className = 'tab-domain';
@@ -218,10 +282,10 @@ class PageAssistant {
                         // Fallback if no domain is available
                         this.elements.tabTitle.textContent = activeTab.title || 'Current Tab';
                     }
-                    
+
                     // Update document title with tab name and domain
-                    document.title = domain ? 
-                        `${activeTab.title || 'Current Tab'} - ${domain}` : 
+                    document.title = domain ?
+                        `${activeTab.title || 'Current Tab'} - ${domain}` :
                         `Page Assistant - ${activeTab.title || 'Current Tab'}`;
                 }
             });
@@ -436,7 +500,7 @@ class PageAssistant {
             console.error('Unexpected response format:', response);
             return { mainResponse: 'Error: Unexpected response format', followUpQuestions: [] };
         }
-        
+
         let mainResponse = fullResponse;
         let followUpQuestions = [];
 
@@ -516,16 +580,16 @@ class PageAssistant {
     async initialize() {
         try {
             this.setLoading(true);
-            
+
             // Get tab information
             this.updateTabInfo();
-            
+
             await this.processQuestion('', true);
             this.setLoading(false);
 
             this.elements.askButton.addEventListener('click', this.handleQuestion);
             this.elements.input.addEventListener('keypress', this.handleKeyPress);
-            
+
             // Set up periodic tab info updates
             setInterval(() => this.updateTabInfo(), 5000);
         } catch (error) {

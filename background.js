@@ -115,31 +115,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.type === 'NAVIGATE_TO_ORIGINAL_TAB') {
-    // Get the tab ID directly from the request
+    // Get the tab ID and URL directly from the request
     const tabId = request.tabId;
-    console.log('NAVIGATE_TO_ORIGINAL_TAB request received with tabId:', tabId);
+    const url = request.url;
+    console.log('NAVIGATE_TO_ORIGINAL_TAB request received with tabId:', tabId, 'and url:', url);
     
     if (tabId) {
-      try {
-        // Use the tab ID passed from the sidepanel
-        chrome.tabs.update(tabId, { active: true }, (updatedTab) => {
-          if (chrome.runtime.lastError) {
-            console.error('Chrome runtime error:', chrome.runtime.lastError);
-            sendResponse({ success: false, error: chrome.runtime.lastError.message });
+      // First check if the tab still exists
+      chrome.tabs.get(tabId, (tab) => {
+        if (chrome.runtime.lastError) {
+          console.log('Tab no longer exists:', chrome.runtime.lastError.message);
+          
+          // If the tab doesn't exist but we have a URL, open a new tab with that URL
+          if (url) {
+            console.log('Opening new tab with URL:', url);
+            chrome.tabs.create({ url: url, active: true }, (newTab) => {
+              console.log('New tab created:', newTab);
+              sendResponse({ success: true, newTab: true, tabId: newTab.id });
+            });
           } else {
-            console.log('Tab activated with ID:', tabId);
-            sendResponse({ success: true });
+            console.error('Tab no longer exists and no URL provided');
+            sendResponse({ success: false, error: 'Tab no longer exists and no URL provided' });
           }
-        });
-        return true; // Keep the message channel open for async response
-      } catch (error) {
-        console.error('Error navigating to tab:', error);
-        sendResponse({ success: false, error: error.message });
-        return false;
-      }
+        } else {
+          // Tab exists, activate it
+          chrome.tabs.update(tabId, { active: true }, (updatedTab) => {
+            if (chrome.runtime.lastError) {
+              console.error('Chrome runtime error:', chrome.runtime.lastError);
+              sendResponse({ success: false, error: chrome.runtime.lastError.message });
+            } else {
+              console.log('Tab activated with ID:', tabId);
+              sendResponse({ success: true, newTab: false });
+            }
+          });
+        }
+      });
+      return true; // Keep the message channel open for async response
+    } else if (url) {
+      // No tab ID but we have a URL, so open a new tab
+      console.log('No tab ID but opening new tab with URL:', url);
+      chrome.tabs.create({ url: url, active: true }, (newTab) => {
+        console.log('New tab created:', newTab);
+        sendResponse({ success: true, newTab: true, tabId: newTab.id });
+      });
+      return true;
     } else {
-      console.error('No tab ID provided in the request');
-      sendResponse({ success: false, error: 'No tab ID provided' });
+      console.error('No tab ID or URL provided in the request');
+      sendResponse({ success: false, error: 'No tab ID or URL provided' });
       return false;
     }
   }
@@ -228,5 +250,38 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     // Only update the properties that have changed, preserving other properties
     originalTab = { ...originalTab, ...tab };
     console.log('Updated originalTab:', originalTab);
+    
+    // Notify the sidepanel about the tab update
+    notifySidepanelAboutTabChange('tab-updated', originalTab);
   }
 });
+
+// Listen for tab activation (when user switches tabs)
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  console.log('Tab activated:', activeInfo);
+  // Notify the sidepanel about tab activation
+  notifySidepanelAboutTabChange('tab-activated', activeInfo);
+});
+
+// Listen for tab removal (when a tab is closed)
+chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
+  console.log('Tab removed:', tabId, removeInfo);
+  if (originalTab && tabId === originalTab.id) {
+    console.log('Original tab was closed');
+  }
+  // Notify the sidepanel about tab removal
+  notifySidepanelAboutTabChange('tab-removed', { tabId, removeInfo });
+});
+
+// Function to notify the sidepanel about tab changes
+function notifySidepanelAboutTabChange(changeType, data) {
+  // Send a message to the sidepanel
+  chrome.runtime.sendMessage({
+    type: 'TAB_STATUS_CHANGED',
+    changeType: changeType,
+    data: data
+  }).catch(error => {
+    // It's normal for this to fail if the sidepanel is not open
+    console.log('Could not notify sidepanel (it may not be open):', error);
+  });
+}
