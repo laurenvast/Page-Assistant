@@ -203,14 +203,24 @@ class PageAssistant {
                     (response) => {
                         console.log('Got navigation response:', response);
                         if (response && response.success) {
-                            console.log('Navigation successful, hiding return button');
-                            this.elements.returnButton.style.display = 'none';
+                            console.log('Navigation successful, hiding buttons');
+                            
+                            // Hide both buttons using the class method (not style.display)
+                            this.elements.returnButton.classList.remove('visible');
+                            this.elements.refreshButton.classList.remove('visible');
 
                             // If a new tab was created, update our original tab info
                             if (response.newTab && response.tabId) {
                                 console.log('Updating original tab ID to new tab:', response.tabId);
                                 this.originalTab.id = response.tabId;
                             }
+                            
+                            // Force a check of button visibility after a short delay
+                            // This ensures buttons will show up again if user navigates away
+                            setTimeout(() => {
+                                this.updateButtonVisibility();
+                                console.log('Forced button visibility update after navigation');
+                            }, 500);
                         } else {
                             console.error('Navigation failed:', response?.error || 'Unknown error');
                             // Show an error message to the user
@@ -298,35 +308,47 @@ class PageAssistant {
     }
 
     updateButtonVisibility() {
-        // Check if we have an original tab and if the current active tab is different
+        // Check if we have an original tab
         if (this.originalTab && this.originalTab.id) {
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 if (tabs.length > 0) {
                     const currentTab = tabs[0];
+                    // Store the current tab info
                     this.currentTab = currentTab;
+                    
+                    // Check if we're on a different tab than the original tab
                     const isDifferentTab = currentTab.id !== this.originalTab.id;
                     console.log('Current tab:', currentTab.id, 'Original tab:', this.originalTab.id, 'Different:', isDifferentTab);
 
                     if (isDifferentTab) {
-                        // If we're on a different tab than the reference tab
-                        // Always show both buttons regardless of whether we're using original tab or not
+                        // We're on a different tab than the original tab
+                        // Show both buttons - ensure they're visible by using both classList and style
                         this.elements.returnButton.classList.add('visible');
                         this.elements.refreshButton.classList.add('visible');
-
+                        
+                        // Also ensure display property is set correctly (in case it was set to 'none')
+                        this.elements.returnButton.style.display = '';
+                        this.elements.refreshButton.style.display = '';
+                        
                         // Update the refresh button favicon with the current tab's favicon
                         this.updateRefreshButtonFavicon(currentTab);
+                        
+                        console.log('Showing both buttons - different tab detected');
                     } else {
-                        // We're on the same tab as the reference tab
+                        // We're on the same tab as the original tab
                         // Hide both buttons
                         this.elements.returnButton.classList.remove('visible');
                         this.elements.refreshButton.classList.remove('visible');
+                        
+                        console.log('Hiding buttons - on original tab');
                     }
                 }
             });
         } else {
-            // No original tab, hide the buttons
+            // No original tab info, hide the buttons
             this.elements.returnButton.classList.remove('visible');
             this.elements.refreshButton.classList.remove('visible');
+            console.log('Hiding buttons - no original tab info');
         }
     }
 
@@ -765,19 +787,29 @@ class PageAssistant {
                     }
                 }
 
-                // Store the current tab as the new reference tab
-                // This will be used to detect if the user navigates away again
+                // Set the current tab as the new reference tab
+                // This is critical for proper button behavior
                 this.originalTab = { ...this.currentTab };
                 console.log('New reference tab set:', this.originalTab.id, this.originalTab.title);
             }
 
-            this.updateButtonVisibility();
+            // Hide both buttons since we're now on the reference tab
+            this.elements.returnButton.classList.remove('visible');
+            this.elements.refreshButton.classList.remove('visible');
+            console.log('Hiding buttons after refreshing with current tab');
 
             // Process initial question with new tab content
             await this.processQuestion('', true);
 
             // Add a message indicating we've switched to the current tab
             this.addMessage('Now using content from the current tab.', 'system-message');
+            
+            // Force a check of button visibility after a short delay
+            // This ensures buttons will show up again if user navigates away
+            setTimeout(() => {
+                this.updateButtonVisibility();
+                console.log('Forced button visibility update after refresh');
+            }, 500);
         } catch (error) {
             console.error('Error refreshing with current tab:', error);
             this.addMessage(`Error: ${error.message}. Failed to refresh with current tab content.`, 'error');

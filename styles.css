@@ -565,22 +565,72 @@ button:disabled {
   background-color: rgba(255, 255, 255, 0.8);
 }
 
-.refresh-button:hover {
+.refresh-button.visible:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
   filter: brightness(1.1);
 }
 
-.return-button:active,
-.refresh-button:active {
+.return-button:active {
   transform: translateY(1px);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* Visibility classes */
-.return-button.visible,
+.refresh-button.visible:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Visibility classes and animations */
+.return-button.visible {
+  display: flex;
+}
+
+.refresh-button {
+  transform: translateX(-50px);
+  /* Start position off-screen */
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
 .refresh-button.visible {
   display: flex;
+  transform: translateX(0);
+  /* End position */
+  opacity: 1;
+}
+
+/* Rotation animation for the refresh icon */
+.refresh-button.visible svg {
+  animation: rotateRefreshIcon 0.8s ease-in-out;
+}
+
+@keyframes rotateRefreshIcon {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Add spin animation on hover */
+.refresh-button.visible:hover svg {
+  animation: rotateRefreshIconHover 0.8s ease-in-out;
+}
+
+@keyframes rotateRefreshIconHover {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 /* Loading container specific styles */
