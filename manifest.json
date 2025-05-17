@@ -35,7 +35,8 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Open Page Assistant"
+    "default_title": "Open Page Assistant",
+    "default_icon": "icon.png"
   },
   "options_page": "options.html"
 }
